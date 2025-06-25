@@ -75,6 +75,12 @@ The plugin automatically adds a floating peace hand button (✌️) to your site
 [peace_log_wall]
 ```
 
+#### Display Login Button (peace hand emoji - if auto insertion is disabled in settings)
+
+```php
+[peace_hand_button]
+```
+
 This shortcode displays the last 10 peace messages received from other sites.
 
 ### REST API Endpoints
