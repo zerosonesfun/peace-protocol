@@ -2,13 +2,17 @@
 defined('ABSPATH') || exit;
 
 add_action('wp_enqueue_scripts', function () {
-    if (!is_front_page()) {
-        return;
-    }
-    wp_enqueue_script('peace-protocol-frontend', PEACE_PROTOCOL_URL . 'js/frontend.js', ['jquery'], PEACE_PROTOCOL_VERSION, true);
+    // Remove front page check so federated login works on any page
+    // if (!is_front_page()) {
+    //     return;
+    // }
+    $js_file = PEACE_PROTOCOL_DIR . 'js/frontend.js';
+    $js_version = file_exists($js_file) ? filemtime($js_file) : PEACE_PROTOCOL_VERSION;
+    wp_enqueue_script('peace-protocol-frontend', PEACE_PROTOCOL_URL . 'js/frontend.js', ['jquery'], $js_version, true);
 
     wp_localize_script('peace-protocol-frontend', 'peaceData', [
-        'restUrl' => rest_url('pass-the-peace/v1/receive'),
+        'restUrl' => rest_url('peace-protocol/v1/receive'),
+        'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('wp_rest'),
         'i18n_confirm' => __('Do you want to give peace to this site?', 'peace-protocol'),
         'i18n_yes' => __('Yes', 'peace-protocol'),
@@ -16,137 +20,85 @@ add_action('wp_enqueue_scripts', function () {
         'i18n_note' => __('Optional note (max 50 characters):', 'peace-protocol'),
         'i18n_send' => __('Send Peace', 'peace-protocol'),
         'i18n_cancel' => __('Cancel', 'peace-protocol'),
+        'siteUrl' => get_site_url(),
     ]);
 });
 
 add_action('wp_footer', function () {
-    if (!is_front_page()) {
+    // Remove front page check so federated login works on any page
+    // if (!is_front_page()) {
+    //     return;
+    // }
+    $hide_auto_button = get_option('peace_hide_auto_button', '0');
+    if ($hide_auto_button === '1') {
         return;
     }
-    ?>
-    <style>
-        #peace-protocol-button {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            background: transparent;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            z-index: 99999;
-        }
-        #peace-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.75);
-            z-index: 100000;
-            align-items: center;
-            justify-content: center;
-        }
-        #peace-modal-content {
-            background: #fff;
-            max-width: 400px;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            color: #333;
-        }
-        @media (prefers-color-scheme: dark) {
-            #peace-modal-content {
-                background: #222;
-                color: #eee;
+    
+    // Debug logging
+    error_log('[Peace Protocol] wp_footer action running');
+    error_log('[Peace Protocol] hide_auto_button: ' . $hide_auto_button);
+    error_log('[Peace Protocol] function_exists: ' . (function_exists('peace_protocol_render_hand_button') ? 'true' : 'false'));
+    
+    if (function_exists('peace_protocol_render_hand_button')) {
+        // The peace_protocol_render_hand_button() function returns safe, fully-escaped HTML markup.
+        // All dynamic content inside is properly escaped using esc_html_e(), esc_attr_e(), etc.
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo peace_protocol_render_hand_button();
+        error_log('[Peace Protocol] Button rendered');
+    } else {
+        error_log('[Peace Protocol] Function does not exist!');
+    }
+});
+
+// REST API endpoint for subscribing to a feed after sending peace
+add_action('rest_api_init', function () {
+    register_rest_route('peace-protocol/v1', '/subscribe', [
+        'methods' => 'POST',
+        'callback' => function ($request) {
+            $feed_url = esc_url_raw($request['feed_url']);
+            if (!$feed_url) {
+                return new WP_Error('missing_feed_url', 'Missing feed_url', ['status' => 400]);
             }
-        }
-        #peace-modal textarea {
-            width: 100%;
-            max-width: 100%;
-            height: 3rem;
-            margin-top: 0.5rem;
-            resize: none;
-        }
-        #peace-modal button {
-            margin-top: 0.5rem;
-            margin-right: 0.5rem;
-        }
-    </style>
-    <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>">✌️</button>
-
-    <div id="peace-modal" role="dialog" aria-modal="true" aria-labelledby="peace-modal-title">
-        <div id="peace-modal-content">
-            <h2 id="peace-modal-title"><?php esc_html_e('Give Peace?', 'peace-protocol'); ?></h2>
-            <p id="peace-modal-question"><?php esc_html_e('Do you want to give peace to this site?', 'peace-protocol'); ?></p>
-            <textarea id="peace-note" maxlength="50" placeholder="<?php esc_attr_e('Optional note (max 50 characters)', 'peace-protocol'); ?>"></textarea>
-            <div>
-                <button id="peace-send"><?php esc_html_e('Send Peace', 'peace-protocol'); ?></button>
-                <button id="peace-cancel"><?php esc_html_e('Cancel', 'peace-protocol'); ?></button>
-            </div>
-        </div>
-    </div>
-    <script>
-    (() => {
-        const btn = document.getElementById('peace-protocol-button');
-        const modal = document.getElementById('peace-modal');
-        const sendBtn = document.getElementById('peace-send');
-        const cancelBtn = document.getElementById('peace-cancel');
-        const noteEl = document.getElementById('peace-note');
-
-        btn.addEventListener('click', () => {
-            modal.style.display = 'flex';
-            noteEl.value = '';
-            noteEl.focus();
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        sendBtn.addEventListener('click', async () => {
-            const note = noteEl.value.trim();
-            if (note.length > 50) {
-                alert('<?php echo esc_js(__('Note must be 50 characters or less.', 'peace-protocol')); ?>');
-                return;
+            $feeds = get_option('peace_feeds', []);
+            if (!in_array($feed_url, $feeds, true)) {
+                $feeds[] = $feed_url;
+                update_option('peace_feeds', $feeds);
             }
-            // Read token and site info from localStorage
-            let peaceData = null;
-            try {
-                peaceData = JSON.parse(localStorage.getItem('peace-protocol-data'));
-            } catch {}
-            if (!peaceData || !peaceData.tokens || !peaceData.tokens.length || !peaceData.site) {
-                alert('<?php echo esc_js(__('You must be logged in as a site admin with Peace Protocol enabled.', 'peace-protocol')); ?>');
-                modal.style.display = 'none';
-                return;
-            }
+            return ['success' => true];
+        },
+        'permission_callback' => '__return_true',
+    ]);
+});
 
-            // Optimistic UI: disable button & close modal
-            sendBtn.disabled = true;
-            modal.style.display = 'none';
+// AJAX handler for subscribing to a feed after sending peace (backup for sites with REST API disabled)
+add_action('wp_ajax_peace_protocol_subscribe_feed', function() {
+    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'peace_protocol_subscribe_feed')) {
+        wp_send_json_error('Missing feed_url or invalid nonce');
+    }
+    $feed_url = esc_url_raw(wp_unslash($_POST['feed_url']));
+    if (!$feed_url) {
+        wp_send_json_error('Invalid feed_url');
+    }
+    $feeds = get_option('peace_feeds', []);
+    if (!in_array($feed_url, $feeds, true)) {
+        $feeds[] = $feed_url;
+        update_option('peace_feeds', $feeds);
+    }
+    wp_send_json_success();
+});
 
-            try {
-                const response = await fetch('<?php echo esc_url(rest_url('pass-the-peace/v1/receive')); ?>', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': '<?php echo wp_create_nonce('wp_rest'); ?>',
-                    },
-                    body: JSON.stringify({
-                        from_site: peaceData.site,
-                        token: peaceData.tokens[0],
-                        note,
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-
-                // Optionally refresh or emit event here
-                alert('<?php echo esc_js(__('Peace sent! ✌️', 'peace-protocol')); ?>');
-            } catch (err) {
-                alert('<?php echo esc_js(__('Failed to send peace. Please try again.', 'peace-protocol')); ?>');
-            }
-            sendBtn.disabled = false;
-        });
-    })();
-    </script>
-    <?php
+add_action('wp_ajax_nopriv_peace_protocol_subscribe_feed', function() {
+    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'peace_protocol_subscribe_feed')) {
+        wp_send_json_error('Missing feed_url or invalid nonce');
+    }
+    $feed_url = esc_url_raw(wp_unslash($_POST['feed_url']));
+    if (!$feed_url) {
+        wp_send_json_error('Invalid feed_url');
+    }
+    $feeds = get_option('peace_feeds', []);
+    if (!in_array($feed_url, $feeds, true)) {
+        $feeds[] = $feed_url;
+        update_option('peace_feeds', $feeds);
+    }
+    wp_send_json_success();
 });

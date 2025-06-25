@@ -31,3 +31,15 @@ add_action('init', function () {
         'has_archive' => false,
     ]);
 });
+
+// Add custom column to peace_log CPT admin table for the optional message (note)
+add_filter('manage_peace_log_posts_columns', function($columns) {
+    $columns['note'] = __('Message', 'peace-protocol');
+    return $columns;
+});
+add_action('manage_peace_log_posts_custom_column', function($column, $post_id) {
+    if ($column === 'note') {
+        $note = get_post_meta($post_id, 'note', true);
+        echo esc_html($note);
+    }
+}, 10, 2);

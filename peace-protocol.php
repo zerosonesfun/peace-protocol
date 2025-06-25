@@ -4,10 +4,15 @@
  * Plugin URI: https://wilcosky.com/peace-protocol
  * Description: A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
  * Version: 1.0.1
+ * Requires at least: 6.0
+ * Tested up to: 6.5
+ * Requires PHP: 7.4
  * Author: Billy Wilcosky
  * Author URI: https://wilcosky.com
- * Text Domain: peace-protocol
  * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: peace-protocol
+ * Domain Path: /languages
  */
 
 defined('ABSPATH') || exit;
@@ -37,4 +42,5 @@ add_action('init', function () {
     if (get_option('peace_token')) {
         delete_option('peace_token');
     }
+    load_plugin_textdomain('peace-protocol', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });

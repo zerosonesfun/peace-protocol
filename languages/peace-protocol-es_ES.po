@@ -1,0 +1,254 @@
+# Copyright (C) 2025 Billy Wilcosky
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Peace Protocol 1.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peace-protocol\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-06-25T15:34:01+00:00\n"
+"PO-Revision-Date: 2025-06-25T15:34:01+00:00\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: peace-protocol\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Plugin Name of the plugin
+#: peace-protocol.php includes/admin-pages.php:6 includes/admin-pages.php:7
+msgid "Peace Protocol"
+msgstr "Protocolo de Paz"
+
+#. Plugin URI of the plugin
+#: peace-protocol.php
+msgid "https://wilcosky.com/peace-protocol"
+msgstr "https://wilcosky.com/peace-protocol"
+
+#. Description of the plugin
+#: peace-protocol.php
+msgid ""
+"A decentralized way for WordPress admins to share peace, respect, and follow "
+"each other with cryptographic handshakes."
+msgstr "Una forma descentralizada para que los administradores de WordPress compartan paz, respeto y se sigan mutuamente con apretones de mano criptográficos."
+
+#. Author of the plugin
+#: peace-protocol.php
+msgid "Billy Wilcosky"
+msgstr "Billy Wilcosky"
+
+#. Author URI of the plugin
+#: peace-protocol.php
+msgid "https://wilcosky.com"
+msgstr "https://wilcosky.com"
+
+#: includes/admin-pages.php:80
+msgid "Settings saved."
+msgstr "Configuración guardada."
+
+#: includes/admin-pages.php:90
+msgid "Peace Protocol Settings"
+msgstr "Ajustes de Protocolo de Paz"
+
+#: includes/admin-pages.php:92
+msgid ""
+"Tokens are used to authenticate your site when sending peace. Keep them "
+"secret. You can generate multiple tokens for rotation. Feeds are sites you "
+"have interacted with."
+msgstr "Los tokens se utilizan para autenticar tu sitio al enviar paz. Mantenlos en secreto. Puedes generar varios tokens para rotación. Los feeds son sitios con los que has interactuado."
+
+#: includes/admin-pages.php:94
+msgid "Your Tokens"
+msgstr "Tus tokens"
+
+#: includes/admin-pages.php:98
+msgid "Generate New Token"
+msgstr "Generar nuevo token"
+
+#: includes/admin-pages.php:106
+msgid ""
+"Hide the automatically inserted peace hand button (use shortcode instead)"
+msgstr "Ocultar el botón de mano de paz insertado automáticamente (usa el shortcode en su lugar)"
+
+#: includes/admin-pages.php:109
+msgid "Save Settings"
+msgstr "Guardar ajustes"
+
+#: includes/admin-pages.php:113
+msgid "Your Site Identities (in this browser)"
+msgstr "Tus identidades de sitio (en este navegador)"
+
+#: includes/admin-pages.php:159
+msgid "Subscribed Peace Feeds"
+msgstr "Feeds de paz suscritos"
+
+#: includes/admin-pages.php:160
+msgid "These are sites you sent peace to."
+msgstr "Estos son los sitios a los que enviaste paz."
+
+#: includes/admin-pages.php:226
+msgid "Unsubscribe from Feed?"
+msgstr "¿Darse de baja del feed?"
+
+#: includes/admin-pages.php:243
+msgid "Could not fetch feed."
+msgstr "No se pudo obtener el feed."
+
+#: includes/admin-pages.php:248
+msgid "No items found in feed."
+msgstr "No se encontraron elementos en el feed."
+
+#: includes/admin-pages.php:265
+msgid "Unsubscribe"
+msgstr "Darse de baja"
+
+#: includes/admin-pages.php:270
+msgid "No peace feeds subscribed yet."
+msgstr "Aún no hay feeds de paz suscritos."
+
+#: includes/admin-pages.php:343
+msgid "Unsubscribed from feed:"
+msgstr "Dado de baja del feed:"
+
+#: includes/frontend-button.php:17 includes/shortcodes.php:201
+msgid "Do you want to give peace to this site?"
+msgstr "¿Quieres dar paz a este sitio?"
+
+#: includes/frontend-button.php:18
+msgid "Yes"
+msgstr "Sí"
+
+#: includes/frontend-button.php:19 includes/frontend-button.php:22
+#: includes/shortcodes.php:207
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: includes/frontend-button.php:20
+msgid "Optional note (max 50 characters):"
+msgstr "Nota opcional (máx. 50 caracteres):"
+
+#: includes/frontend-button.php:21 includes/shortcodes.php:206
+msgid "Send Peace"
+msgstr "Enviar paz"
+
+#: includes/register-cpt.php:6 includes/register-cpt.php:8
+msgid "Peace Logs"
+msgstr "Registros de paz"
+
+#: includes/register-cpt.php:7 includes/register-cpt.php:9
+msgid "Peace Log"
+msgstr "Registro de paz"
+
+#: includes/register-cpt.php:10
+msgid "Add New"
+msgstr "Añadir nuevo"
+
+#: includes/register-cpt.php:11
+msgid "Add New Peace Log"
+msgstr "Añadir nuevo registro de paz"
+
+#: includes/register-cpt.php:12
+msgid "New Peace Log"
+msgstr "Nuevo registro de paz"
+
+#: includes/register-cpt.php:13
+msgid "Edit Peace Log"
+msgstr "Editar registro de paz"
+
+#: includes/register-cpt.php:14
+msgid "View Peace Log"
+msgstr "Ver registro de paz"
+
+#: includes/register-cpt.php:15
+msgid "All Peace Logs"
+msgstr "Todos los registros de paz"
+
+#: includes/register-cpt.php:16
+msgid "Search Peace Logs"
+msgstr "Buscar registros de paz"
+
+#: includes/register-cpt.php:17
+msgid "No peace logs found."
+msgstr "No se encontraron registros de paz."
+
+#: includes/register-cpt.php:18
+msgid "No peace logs found in Trash."
+msgstr "No se encontraron registros de paz en la papelera."
+
+#: includes/register-cpt.php:37
+msgid "Message"
+msgstr "Mensaje"
+
+#: includes/shortcodes.php:196
+msgid "Give Peace ✌️"
+msgstr "Dar paz ✌️"
+
+#: includes/shortcodes.php:200
+msgid "Give Peace?"
+msgstr "¿Dar paz?"
+
+#: includes/shortcodes.php:202
+msgid "Optional note (max 50 characters)"
+msgstr "Nota opcional (máx. 50 caracteres)"
+
+#: includes/shortcodes.php:211
+msgid "Log in as another site"
+msgstr "Iniciar sesión como otro sitio"
+
+#: includes/shortcodes.php:218
+msgid "Peace Sent!"
+msgstr "¡Paz enviada!"
+
+#: includes/shortcodes.php:219 includes/shortcodes.php:432
+msgid "Peace sent successfully!"
+msgstr "¡Paz enviada con éxito!"
+
+#: includes/shortcodes.php:227
+msgid "Log in as your site"
+msgstr "Iniciar sesión como tu sitio"
+
+#: includes/shortcodes.php:228
+msgid "To send peace, enter your domain (e.g. https://yoursite.com):"
+msgstr "Para enviar paz, introduce tu dominio (ej. https://tusitio.com):"
+
+#: includes/shortcodes.php:237
+msgid "Send peace as this site"
+msgstr "Enviar paz como este sitio"
+
+#: includes/shortcodes.php:244
+msgid "Start Peace Protocol"
+msgstr "Iniciar Protocolo de Paz"
+
+#: includes/shortcodes.php:245
+msgid "Click the following link to start the peace protocol:"
+msgstr "Haz clic en el siguiente enlace para iniciar el protocolo de paz:"
+
+#: includes/shortcodes.php:248
+msgid "Continue to Site"
+msgstr "Continuar al sitio"
+
+#: includes/shortcodes.php:252
+msgid ""
+"This will open your site in a new tab to complete the authentication process."
+msgstr "Esto abrirá tu sitio en una nueva pestaña para completar el proceso de autenticación."
+
+#: includes/shortcodes.php:334
+msgid "Note must be 50 characters or less."
+msgstr "La nota debe tener 50 caracteres o menos."
+
+#: includes/shortcodes.php:339
+msgid ""
+"No valid Peace Protocol identity found in this browser. Please visit your "
+"site's admin to generate a token."
+msgstr "No se encontró una identidad válida de Protocolo de Paz en este navegador. Por favor, visita el administrador de tu sitio para generar un token."
+
+#: includes/shortcodes.php:457
+msgid "Failed to send peace. Please try again."
+msgstr "No se pudo enviar la paz. Por favor, inténtalo de nuevo."
+
+#: includes/shortcodes.php:576
+msgid ""
+"No valid Peace Protocol identity found for this site. Please visit your "
+"site's admin to generate a token."
+msgstr ""
