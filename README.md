@@ -1,10 +1,11 @@
 # Peace Protocol
 
-A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
+A decentralized way for WordPress admins to share peace, respect, follow each other, and log in with cryptographic handshakes.
 
 ## Features
 
 - **Peace Handshakes**: Send peace messages to other WordPress sites
+- **Login with your site**: Log into another WordPress site (if they have this same plugin) as yoursite.com
 - **Token Management**: Secure token-based authentication with rotation
 - **Federated Login**: Cross-site user authentication for seamless commenting
 - **Feed Subscription**: Automatically subscribe to peace feeds from other sites
@@ -20,11 +21,11 @@ The Peace Protocol includes a powerful federated login system that allows users 
 
 1. **Federated Handshake**: When a user from a remote site completes the Peace Protocol handshake, your site receives a verification code and the remote site's domain.
 
-2. **Federated User Creation & Login**: The plugin creates (or reuses) a special "federated peer" WordPress user for that remote site (e.g., `federated_example_com` for `example.com`). This user cannot access the dashboard or admin, only the front end.
+2. **Federated User Creation & Login**: The plugin creates (or reuses) a special "federated peer" WordPress user for that remote site (e.g., `examplecom` for `https://example.com`). This user cannot access the dashboard or admin, only the front end.
 
 3. **Automatic Sign-in**: The plugin logs in the remote user as the federated user, so they are "signed in" for the session.
 
-4. **Comment Attribution**: When the federated user leaves a comment, it is attributed to the remote site (e.g., "Logged in as example.com"), enabling seamless cross-site conversation.
+4. **Comment Attribution**: When the federated user leaves a comment, it is attributed to the remote site (e.g., "Logged in as examplecom"), enabling seamless cross-site conversation.
 
 5. **Cleanup**: All federated users are removed if the plugin is uninstalled.
 
@@ -45,12 +46,12 @@ The Peace Protocol includes a powerful federated login system that allows users 
 ### User Experience
 
 1. User from SiteA visits SiteB and wants to comment
-2. User clicks "Send Peace" button on SiteB
+2. User clicks "Peace" button on SiteB
 3. SiteB redirects to SiteA for authentication
 4. SiteA validates the user and generates an authorization code
 5. User is redirected back to SiteB with the authorization code
 6. SiteB automatically logs in the user as a federated user from SiteA
-7. User can now comment on SiteB as "Logged in as sitea.com"
+7. User can now comment on SiteB as "siteacom"
 
 This enables federated, cross-site commenting in a secure and native-feeling way for WordPress users!
 
@@ -66,7 +67,7 @@ This enables federated, cross-site commenting in a secure and native-feeling way
 
 1. Go to Settings > Peace Protocol
 2. Click "Generate New Token" to create a new authentication token
-3. Use these tokens to authenticate your site when sending peace to other sites
+3. Create a few and each time you visit the settings page, they'll rotate (for security reasons)
 
 ### Sending Peace
 
