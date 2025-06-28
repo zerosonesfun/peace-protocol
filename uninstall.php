@@ -11,6 +11,15 @@ delete_option('peace_last_sent');
 delete_option('peace_hide_auto_button');
 delete_option('peace_federated_codes');
 
+// Clean up federated users
+$federated_users = get_users(array('role' => 'federated_peer'));
+foreach ($federated_users as $user) {
+    wp_delete_user($user->ID);
+}
+
+// Remove the federated_peer role
+remove_role('federated_peer');
+
 $logs = get_posts([
     'post_type' => 'peace_log',
     'numberposts' => -1,

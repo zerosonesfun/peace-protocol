@@ -14,6 +14,7 @@ add_action('wp_enqueue_scripts', function () {
         'restUrl' => rest_url('peace-protocol/v1/receive'),
         'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('wp_rest'),
+        'federatedLoginNonce' => wp_create_nonce('peace_protocol_federated_login'),
         'i18n_confirm' => __('Do you want to give peace to this site?', 'peace-protocol'),
         'i18n_yes' => __('Yes', 'peace-protocol'),
         'i18n_no' => __('Cancel', 'peace-protocol'),

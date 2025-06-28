@@ -26,7 +26,7 @@ function peace_protocol_admin_page()
         
         // Generate authorization code
         $auth_code = wp_generate_password(32, false);
-        $expires = time() + 3600; // 1 hour
+        $expires = time() + 300; // 5 minutes
         
         // Store authorization code
         $authorizations = get_option('peace_protocol_authorizations', array());
@@ -67,16 +67,12 @@ function peace_protocol_admin_page()
         $tokens[] = wp_generate_password(32, true, true);
         update_option('peace_tokens', $tokens);
     }
-    if (isset($_POST['peace_protocol_delete_token']) && isset($_POST['token_to_delete']) && check_admin_referer('peace_protocol_delete_token')) {
-        $token_to_delete = sanitize_text_field($_POST['token_to_delete']);
-        $tokens = get_option('peace_tokens', []);
-        $tokens = array_filter($tokens, fn($t) => $t !== $token_to_delete);
-        update_option('peace_tokens', array_values($tokens));
-    }
 
     if (isset($_POST['peace_protocol_save_settings']) && check_admin_referer('peace_protocol_settings')) {
         $hide_auto_button = isset($_POST['peace_hide_auto_button']) ? '1' : '0';
+        $button_position = sanitize_text_field($_POST['peace_button_position']);
         update_option('peace_hide_auto_button', $hide_auto_button);
+        update_option('peace_button_position', $button_position);
         echo '<div class="updated"><p>' . esc_html__('Settings saved.', 'peace-protocol') . '</p></div>';
     }
 
@@ -85,11 +81,12 @@ function peace_protocol_admin_page()
     $site_url = get_site_url();
     $ajax_nonce = wp_create_nonce('peace_protocol_rotate_tokens');
     $hide_auto_button = get_option('peace_hide_auto_button', '0');
+    $button_position = get_option('peace_button_position', 'top-right');
     ?>
     <div class="wrap">
         <h1><?php esc_html_e('Peace Protocol Settings', 'peace-protocol'); ?></h1>
 
-        <p><?php esc_html_e('Tokens are used to authenticate your site when sending peace. Keep them secret. You can generate multiple tokens for rotation. Feeds are sites you have interacted with.', 'peace-protocol'); ?></p>
+        <p><?php esc_html_e('Tokens are used to authenticate your site with other WordPress sites. Keep them secret. You can generate multiple tokens for rotation. Having a few tokens is best for security reasons.', 'peace-protocol'); ?></p>
 
         <h2><?php esc_html_e('Your Tokens', 'peace-protocol'); ?></h2>
         <form method="post" style="margin-bottom:2em;">
@@ -101,22 +98,52 @@ function peace_protocol_admin_page()
 
         <form method="post" style="margin-bottom:2em;">
             <?php wp_nonce_field('peace_protocol_settings'); ?>
-            <label>
-                <input type="checkbox" name="peace_hide_auto_button" value="1" <?php checked(get_option('peace_hide_auto_button', '0'), '1'); ?> />
-                <?php esc_html_e('Hide the automatically inserted peace hand button (use shortcode instead)', 'peace-protocol'); ?>
-            </label>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="peace_hide_auto_button">
+                            <?php esc_html_e('Auto-inserted Button', 'peace-protocol'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" id="peace_hide_auto_button" name="peace_hide_auto_button" value="1" <?php checked($hide_auto_button, '1'); ?> />
+                            <?php esc_html_e('Hide the automatically inserted peace hand button (use shortcode instead)', 'peace-protocol'); ?>
+                        </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="peace_button_position">
+                            <?php esc_html_e('Button Position', 'peace-protocol'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <select id="peace_button_position" name="peace_button_position">
+                            <option value="top-right" <?php selected($button_position, 'top-right'); ?>><?php esc_html_e('Top Right (default)', 'peace-protocol'); ?></option>
+                            <option value="top-left" <?php selected($button_position, 'top-left'); ?>><?php esc_html_e('Top Left', 'peace-protocol'); ?></option>
+                            <option value="bottom-left" <?php selected($button_position, 'bottom-left'); ?>><?php esc_html_e('Bottom Left', 'peace-protocol'); ?></option>
+                            <option value="bottom-right" <?php selected($button_position, 'bottom-right'); ?>><?php esc_html_e('Bottom Right', 'peace-protocol'); ?></option>
+                        </select>
+                        <p class="description">
+                            <?php esc_html_e('Choose where the auto-inserted peace hand button appears on your site. This setting only applies when the auto-inserted button is visible.', 'peace-protocol'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
             <button type="submit" name="peace_protocol_save_settings" class="button button-primary">
                 <?php esc_html_e('Save Settings', 'peace-protocol'); ?>
             </button>
         </form>
 
-        <h2><?php esc_html_e('Your Site Identities (in this browser)', 'peace-protocol'); ?></h2>
+        <h2><?php esc_html_e('Your Tokens', 'peace-protocol'); ?></h2>
         <div id="peace-identities-table"></div>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const LS_KEY = 'peace-protocol-identities';
             const site = <?php echo json_encode(get_site_url()); ?>;
             const tokens = <?php echo json_encode(get_option('peace_tokens', [])); ?>;
+            const ajaxNonce = <?php echo json_encode(wp_create_nonce('peace_protocol_delete_token')); ?>;
             
             // Sync only the active token (first one) to localStorage for this site
             let identities = [];
@@ -143,21 +170,107 @@ function peace_protocol_admin_page()
                 return;
             }
             
-            let html = '<table class="widefat fixed striped"><thead><tr><th>Token</th><th>Status</th></tr></thead><tbody>';
+            let html = '<table class="widefat fixed striped"><thead><tr><th>Token</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
             tokens.forEach((token, i) => {
                 html += '<tr>';
                 html += '<td><code>' + token + '</code></td>';
                 html += '<td>' + (i === 0 ? '<span style="color:#2563eb;font-weight:bold;">Active (in localStorage)</span>' : '<span style="color:#888;">Inactive</span>') + '</td>';
+                html += '<td>';
+                if (tokens.length > 1) {
+                    html += '<button type="button" class="button button-small button-link-delete delete-token-btn" data-token="' + token + '">Delete</button>';
+                } else {
+                    html += '<span style="color:#888;font-style:italic;">Cannot delete last token</span>';
+                }
+                html += '</td>';
                 html += '</tr>';
             });
             html += '</tbody></table>';
             html += '<p><em>Note: Only the active token (first one) is synced to your browser\'s localStorage for use on the frontend.</em></p>';
+            
+            // Add debug section
+            html += '<h3 style="margin-top: 2em; color: #666;">Debug Information</h3>';
+            html += '<div style="background: #f9f9f9; padding: 1em; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+            html += '<p><strong>Active Token (Database):</strong></p>';
+            if (tokens.length > 0) {
+                html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + tokens[0] + '</p>';
+                html += '<p><strong>Token Length:</strong> ' + tokens[0].length + ' characters</p>';
+            } else {
+                html += '<p style="color: #dc3232;">No tokens in database</p>';
+            }
+            
+            html += '<p><strong>localStorage Identities:</strong></p>';
+            html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + JSON.stringify(identities, null, 2) + '</p>';
+            
+            // Check if localStorage matches database
+            const localStorageToken = identities.find(id => id.site === site)?.token;
+            if (localStorageToken && tokens.length > 0) {
+                const matches = localStorageToken === tokens[0];
+                html += '<p><strong>Token Match:</strong> <span style="color: ' + (matches ? '#46b450' : '#dc3232') + '; font-weight: bold;">' + (matches ? '✓ MATCHES' : '✗ MISMATCH') + '</span></p>';
+                if (!matches) {
+                    html += '<p><strong>localStorage Token:</strong></p>';
+                    html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + localStorageToken + '</p>';
+                    html += '<p><strong>localStorage Token Length:</strong> ' + localStorageToken.length + ' characters</p>';
+                }
+            } else if (!localStorageToken && tokens.length > 0) {
+                html += '<p><strong>Token Match:</strong> <span style="color: #dc3232; font-weight: bold;">✗ NO TOKEN IN LOCALSTORAGE</span></p>';
+            } else if (localStorageToken && tokens.length === 0) {
+                html += '<p><strong>Token Match:</strong> <span style="color: #dc3232; font-weight: bold;">✗ NO TOKENS IN DATABASE</span></p>';
+            }
+            
+            html += '</div>';
+            
             tableDiv.innerHTML = html;
+            
+            // Add event listeners for delete buttons
+            document.querySelectorAll('.delete-token-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const token = this.getAttribute('data-token');
+                    if (confirm('Are you sure you want to delete this token? This action cannot be undone.')) {
+                        deleteToken(token);
+                    }
+                });
+            });
+            
+            function deleteToken(token) {
+                const formData = new FormData();
+                formData.append('action', 'peace_protocol_delete_token');
+                formData.append('token', token);
+                formData.append('nonce', ajaxNonce);
+                
+                fetch(ajaxurl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove token from localStorage if it was the active one
+                        let identities = [];
+                        try {
+                            const val = localStorage.getItem(LS_KEY);
+                            if (val) identities = JSON.parse(val);
+                            if (!Array.isArray(identities)) identities = [];
+                        } catch (e) { identities = []; }
+                        
+                        identities = identities.filter(id => !(id.site === site && id.token === token));
+                        localStorage.setItem(LS_KEY, JSON.stringify(identities));
+                        
+                        // Reload the page to show updated token list
+                        location.reload();
+                    } else {
+                        alert('Error deleting token: ' + (data.data || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting token. Please try again.');
+                });
+            }
         });
         </script>
 
         <h2><?php esc_html_e('Subscribed Peace Feeds', 'peace-protocol'); ?></h2>
-        <p><?php esc_html_e('These are sites you sent peace to.', 'peace-protocol'); ?></p>
+        <p><?php esc_html_e('These are sites you\'ve sent peace to.', 'peace-protocol'); ?></p>
         <style>
         .peace-feed-grid { display: flex; flex-wrap: wrap; gap: 1.5em; margin: 0 -0.75em; }
         .peace-feed-card {
@@ -212,6 +325,15 @@ function peace_protocol_admin_page()
         /* Admin page button styling */
         button[name="peace_protocol_save_settings"] {
             margin-left: 1em;
+        }
+        /* Token deletion button styling */
+        .delete-token-btn {
+            color: #dc3232 !important;
+            border-color: #dc3232 !important;
+        }
+        .delete-token-btn:hover {
+            background: #dc3232 !important;
+            color: #fff !important;
         }
         /* Dark mode support for admin unsubscribe modal */
         @media (prefers-color-scheme: dark) {
@@ -364,6 +486,39 @@ add_action('wp_ajax_peace_protocol_rotate_tokens', function () {
     if (!is_array($tokens)) {
         wp_send_json_error('Invalid tokens', 400);
     }
+    update_option('peace_tokens', $tokens);
+    wp_send_json_success();
+});
+
+add_action('wp_ajax_peace_protocol_delete_token', function () {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Unauthorized', 403);
+    }
+    if (!isset($_POST['token']) || !isset($_POST['nonce'])) {
+        wp_send_json_error('Missing required parameters', 400);
+    }
+    
+    $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+    if (!wp_verify_nonce($nonce, 'peace_protocol_delete_token')) {
+        wp_send_json_error('Invalid nonce', 400);
+    }
+    
+    $token_to_delete = sanitize_text_field(wp_unslash($_POST['token']));
+    $tokens = get_option('peace_tokens', []);
+    
+    // Prevent deleting the last token
+    if (count($tokens) <= 1) {
+        wp_send_json_error('Cannot delete the last token', 400);
+    }
+    
+    // Remove the token
+    $tokens = array_filter($tokens, function($token) use ($token_to_delete) {
+        return $token !== $token_to_delete;
+    });
+    
+    // Re-index array
+    $tokens = array_values($tokens);
+    
     update_option('peace_tokens', $tokens);
     wp_send_json_success();
 });

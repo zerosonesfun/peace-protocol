@@ -1,197 +1,93 @@
-# Peace Protocol ✌️
+# Peace Protocol
 
 A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
 
-[![WordPress](https://img.shields.io/badge/WordPress-6.0+-blue.svg)](https://wordpress.org/)
-[![PHP](https://img.shields.io/badge/PHP-7.4+-purple.svg)](https://php.net/)
-[![License](https://img.shields.io/badge/License-GPL%20v2%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![Version](https://img.shields.io/badge/Version-1.0.1-orange.svg)](https://github.com/your-username/peace-protocol)
+## Features
 
-## 🌟 Features
+- **Peace Handshakes**: Send peace messages to other WordPress sites
+- **Token Management**: Secure token-based authentication with rotation
+- **Federated Login**: Cross-site user authentication for seamless commenting
+- **Feed Subscription**: Automatically subscribe to peace feeds from other sites
+- **Admin Interface**: Easy token management and feed monitoring
 
-- **Cryptographic Handshakes**: Secure token-based authentication for peace sharing
-- **Decentralized Federation**: Connect with other WordPress sites without central authority
-- **Peace Feed**: View incoming peace messages from other sites
-- **Automatic Button**: Floating peace hand button on your site
-- **Shortcode Support**: `[peace_log_wall]` to display peace messages
-- **Admin Dashboard**: Manage tokens, feeds, and settings
-- **Multi-language Support**: Available in English, Spanish, French, Japanese, and Chinese
-- **Dark Mode Support**: Automatic theme adaptation
-- **Mobile Responsive**: Works seamlessly on all devices
+## Federated Login Feature
 
-## 📋 Requirements
+### Overview
 
-- WordPress 6.0 or higher
-- PHP 7.4 or higher
-- Administrator privileges for setup
+The Peace Protocol includes a powerful federated login system that allows users from remote sites to comment on your WordPress site as their own site identity, after completing a secure handshake.
 
-## 🚀 Installation
+### How It Works
 
-### Method 1: WordPress Admin (Recommended)
+1. **Federated Handshake**: When a user from a remote site completes the Peace Protocol handshake, your site receives a verification code and the remote site's domain.
 
-1. Download the plugin ZIP file
-2. Go to **Plugins > Add New** in your WordPress admin
-3. Click **Upload Plugin** and select the ZIP file
-4. Click **Install Now** and then **Activate**
+2. **Federated User Creation & Login**: The plugin creates (or reuses) a special "federated peer" WordPress user for that remote site (e.g., `federated_example_com` for `example.com`). This user cannot access the dashboard or admin, only the front end.
 
-### Method 2: Manual Installation
+3. **Automatic Sign-in**: The plugin logs in the remote user as the federated user, so they are "signed in" for the session.
 
-1. Upload the `peace-protocol` folder to `/wp-content/plugins/`
-2. Activate the plugin through the **Plugins** menu in WordPress
-3. Go to **Settings > Peace Protocol** to configure
+4. **Comment Attribution**: When the federated user leaves a comment, it is attributed to the remote site (e.g., "Logged in as example.com"), enabling seamless cross-site conversation.
 
-## ⚙️ Configuration
+5. **Cleanup**: All federated users are removed if the plugin is uninstalled.
 
-### Initial Setup
+### Security Features
 
-1. Navigate to **Settings > Peace Protocol** in your WordPress admin
-2. Generate your first authentication token
-3. Configure your site settings
-4. The plugin will automatically create necessary database tables
+- **Role-Based Access**: Federated users have the `federated_peer` role with minimal permissions
+- **Admin Blocking**: Federated users cannot access the WordPress admin area
+- **Secure Handshake**: Only sites completing the handshake can create federated logins
+- **Automatic Cleanup**: Federated users are removed on plugin uninstall
 
-### Token Management
+### Technical Implementation
 
-- **Generate New Token**: Create additional tokens for rotation
-- **Active Token**: The first token is automatically synced to your browser
-- **Token Rotation**: Tokens are automatically rotated for security
+- A new role `federated_peer` is registered with minimal capabilities
+- After handshake validation (`peace_authorization_code` and `peace_federated_site` in the URL), the plugin creates/logs in the federated user
+- Admin/backend access is blocked for federated users
+- The process is fully automatic—no additional user action is required after handshake
 
-### Settings
+### User Experience
 
-- **Hide Auto Button**: Disable the floating peace hand button (use shortcode instead)
-- **Peace Feeds**: View sites you've interacted with
-- **Site Identities**: Manage your site's cryptographic identity
+1. User from SiteA visits SiteB and wants to comment
+2. User clicks "Send Peace" button on SiteB
+3. SiteB redirects to SiteA for authentication
+4. SiteA validates the user and generates an authorization code
+5. User is redirected back to SiteB with the authorization code
+6. SiteB automatically logs in the user as a federated user from SiteA
+7. User can now comment on SiteB as "Logged in as sitea.com"
 
-## 🎯 Usage
+This enables federated, cross-site commenting in a secure and native-feeling way for WordPress users!
 
-### Automatic Peace Button
+## Installation
 
-The plugin automatically adds a floating peace hand button (✌️) to your site. Users can click it to send peace to other WordPress sites.
+1. Upload the plugin files to `/wp-content/plugins/peace-protocol/`
+2. Activate the plugin through the 'Plugins' screen in WordPress
+3. Go to Settings > Peace Protocol to configure tokens and view feeds
 
-### Shortcodes
+## Usage
 
-#### Display Peace Log Wall
+### Generating Tokens
 
-```php
-[peace_log_wall]
-```
+1. Go to Settings > Peace Protocol
+2. Click "Generate New Token" to create a new authentication token
+3. Use these tokens to authenticate your site when sending peace to other sites
 
-#### Display Login Button (peace hand emoji - if auto insertion is disabled in settings)
+### Sending Peace
 
-```php
-[peace_hand_button]
-```
+1. Use the `[peace_button]` shortcode or the automatically inserted button
+2. Enter the target site URL
+3. Write your peace message
+4. Click send
 
-This shortcode displays the last 10 peace messages received from other sites.
+### Managing Feeds
 
-### REST API Endpoints
+- View subscribed peace feeds in the admin interface
+- Unsubscribe from feeds you no longer want to follow
+- Feeds are automatically added when you send peace to new sites
 
-The plugin provides REST API endpoints for federation:
+## Security
 
-- `GET /wp-json/peace-protocol/v1/feed` - Get peace feed
-- `POST /wp-json/peace-protocol/v1/peace` - Send peace to another site
+- Tokens are cryptographically secure and randomly generated
+- Authorization codes expire after 5 minutes
+- Federated users have minimal permissions and cannot access admin areas
+- All authentication is validated server-side
 
-### Frontend JavaScript
+## Support
 
-The plugin includes frontend JavaScript for:
-- Peace button interactions
-- Modal dialogs
-- Federation handshakes
-- Local storage management
-
-## 🔧 Development
-
-### File Structure
-
-```
-peace-protocol/
-├── includes/
-│   ├── admin-pages.php      # Admin dashboard
-│   ├── frontend-button.php  # Frontend peace button
-│   ├── register-cpt.php     # Custom post types
-│   ├── rest-endpoints.php   # REST API endpoints
-│   └── shortcodes.php       # Shortcode implementations
-├── js/
-│   └── frontend.js          # Frontend JavaScript
-├── languages/               # Translation files
-├── peace-protocol.php       # Main plugin file
-└── README.md               # This file
-```
-
-### Custom Post Types
-
-- **peace_log**: Stores incoming peace messages
-- **peace_feed**: Manages federated site feeds
-
-### Hooks and Filters
-
-The plugin uses WordPress standard hooks and filters for extensibility.
-
-### Translation Ready
-
-The plugin is fully translation-ready with:
-- Text domain: `peace-protocol`
-- POT file: `languages/peace-protocol.pot`
-- Available languages: English, Spanish, French, Japanese, Chinese
-
-## 🌐 Federation
-
-Peace Protocol enables decentralized federation between WordPress sites:
-
-1. **Handshake Process**: Sites exchange cryptographic tokens
-2. **Feed Subscription**: Sites subscribe to each other's peace feeds
-3. **Message Exchange**: Peace messages are shared between federated sites
-4. **Authorization**: OAuth-like flow for secure site-to-site communication
-
-## 🔒 Security
-
-- **Token-based Authentication**: Secure cryptographic tokens
-- **Nonce Verification**: CSRF protection on all forms
-- **Input Sanitization**: All user inputs are properly sanitized
-- **Output Escaping**: All outputs are properly escaped
-- **Capability Checks**: Proper WordPress capability checks
-
-## 📝 Changelog
-
-### Version 1.0.1
-- Initial release
-- Core federation functionality
-- Admin dashboard
-- Frontend peace button
-- Shortcode support
-- Multi-language support
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Billy Wilcosky**
-- Website: [https://wilcosky.com](https://wilcosky.com)
-- Plugin URI: [https://wilcosky.com/peace-protocol](https://wilcosky.com/peace-protocol)
-
-## 🙏 Acknowledgments
-
-- WordPress community for the amazing platform
-- Contributors and translators
-- All the peaceful sites that make the web a better place
-
-## 📞 Support
-
-For support, feature requests, or bug reports:
-
-1. Check the [WordPress.org plugin page](https://wordpress.org/plugins/peace-protocol/)
-2. Visit the [GitHub repository](https://github.com/your-username/peace-protocol)
-3. Contact the author at [https://wilcosky.com](https://wilcosky.com)
-
----
-
-**Peace be with you! ✌️**
+For support and questions, please visit the plugin's GitHub repository or contact the author.

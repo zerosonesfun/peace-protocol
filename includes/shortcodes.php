@@ -24,13 +24,33 @@ add_shortcode('peace_log_wall', function () {
 // Reusable function for peace hand button/modal markup
 if (!function_exists('peace_protocol_render_hand_button')) {
     function peace_protocol_render_hand_button() {
+        // Get the button position setting
+        $button_position = get_option('peace_button_position', 'top-right');
+        
+        // Generate CSS based on position
+        $position_css = '';
+        switch ($button_position) {
+            case 'top-left':
+                $position_css = 'top: 1rem; left: 1rem;';
+                break;
+            case 'bottom-left':
+                $position_css = 'bottom: 1rem; left: 1rem;';
+                break;
+            case 'bottom-right':
+                $position_css = 'bottom: 1rem; right: 1rem;';
+                break;
+            case 'top-right':
+            default:
+                $position_css = 'top: 1rem; right: 1rem;';
+                break;
+        }
+        
         ob_start();
         ?>
         <style>
             #peace-protocol-button {
                 position: fixed;
-                top: 1rem;
-                right: 1rem;
+                <?php echo $position_css; ?>
                 background: transparent;
                 border: none;
                 font-size: 2rem;
@@ -38,7 +58,11 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 z-index: 99999;
             }
             body.admin-bar #peace-protocol-button {
-                top: 3rem;
+                <?php 
+                if (strpos($button_position, 'top') === 0) {
+                    echo 'top: 3rem;';
+                }
+                ?>
             }
             #peace-modal {
                 display: none;
@@ -208,7 +232,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 </div>
                 <div style="margin-top:0.7em;text-align:right;">
                     <a href="#" id="peace-switch-site-link" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
-                        <?php esc_html_e('Log in as another site', 'peace-protocol'); ?>
+                        <?php esc_html_e('', 'peace-protocol'); ?>
                     </a>
                 </div>
             </div>
@@ -225,8 +249,8 @@ if (!function_exists('peace_protocol_render_hand_button')) {
         <div id="peace-federated-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100001;align-items:center;justify-content:center;">
           <div id="peace-federated-modal-content" style="max-width:400px;padding:1rem;border-radius:0.5rem;">
             <h2><?php esc_html_e('Log in as your site', 'peace-protocol'); ?></h2>
-            <p><?php esc_html_e('To send peace, enter your domain (e.g. https://yoursite.com):', 'peace-protocol'); ?></p>
-            <input type="text" id="peace-federated-domain" style="width:100%;margin-bottom:0.7em;" placeholder="https://yoursite.com" />
+            <p><?php esc_html_e('Enter your domain (e.g. https://yoursite.com):', 'peace-protocol'); ?></p>
+            <input type="text" id="peace-federated-domain" style="width:100%;margin-bottom:0.7em;color:inherit;" placeholder="https://yoursite.com" />
             <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5em;">
               <button id="peace-federated-cancel" class="button">Cancel</button>
               <button id="peace-federated-submit" class="button button-primary">Continue</button>
@@ -234,7 +258,10 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             <div id="peace-federated-error" style="color:#b91c1c;font-size:0.97em;margin-top:0.5em;display:none;"></div>
             <div style="margin-top:1em;text-align:center;border-top:1px solid #eee;padding-top:1em;">
               <a href="#" id="peace-send-as-current-site" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
-                <?php esc_html_e('Send peace as this site', 'peace-protocol'); ?>
+                <?php esc_html_e('', 'peace-protocol'); ?>
+              </a>
+              <a href="https://github.com/zerosonesfun/peace-protocol" id="what-is-peace-protocol" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
+                <?php esc_html_e('What is this?', 'peace-protocol'); ?>
               </a>
             </div>
           </div>
@@ -511,8 +538,8 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 
                 if (selectedIdentity && selectedIdentity.token && selectedIdentity.site) {
                     console.log('[Peace Protocol] Showing send peace modal with identity:', selectedIdentity.site);
-                    document.getElementById('peace-modal-title').textContent = 'Give Peace?';
-                    document.getElementById('peace-modal-question').textContent = 'Do you want to give peace to this site?';
+                    document.getElementById('peace-modal-title').textContent = 'Send Peace?';
+                    document.getElementById('peace-modal-question').textContent = 'You may send a message to this site below.';
                     noteEl.style.display = 'block';
                     sendBtn.style.display = 'block';
                     cancelBtn.textContent = 'Cancel';
