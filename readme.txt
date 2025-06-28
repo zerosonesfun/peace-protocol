@@ -11,15 +11,16 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 A decentralized protocol for WordPress admins to send peace, respect, and follow each other with cryptographic handshakes. Connect your site to others and build a network of trust.
 
 == Description ==
-Peace Protocol is a new way for WordPress webmasters to connect, share peace, and build a decentralized network of trust and respect. With this plugin, WordPress admins can send each other "peace"—a cryptographically signed handshake, optionally with a note. When you send peace to another site, your site is automatically subscribed to that site's feed, allowing you to follow their updates and activity.
+Peace Protocol is a new way for WordPress webmasters to connect, share peace, and build a decentralized network of trust and respect. With this plugin, WordPress admins can send each other "peace"—a cryptographically signed handshake, optionally with a note. You are then logged in as your site and can leave comments. When you send peace to another site, your site is automatically subscribed to that site's feed, allowing you to follow their updates and activity.
 
 **Key Features:**
 - Send peace to other WordPress sites, optionally including a short note.
+- The notes are stored in each site's Peace Log.
 - Each peace is a cryptographically signed handshake, ensuring authenticity.
 - When you send peace, your site is subscribed to the other site's feed.
+- The Peace Protocol also logs you into other WordPress sites as your site.
 - View and manage your tokens and feeds from the admin settings page.
 - Fully translation-ready and available in multiple languages.
-- Future plans include support for post liking, commenting, and more—aiming to connect the 40%+ of the web that uses WordPress.
 
 **How it works:**
 1. Install and activate the plugin on your WordPress site.
@@ -46,10 +47,10 @@ Peace Protocol is a new way for WordPress webmasters to connect, share peace, an
 Tokens are cryptographically secure strings used to authenticate your site when sending peace to others. Generating multiple tokens allows you to rotate them for better security, and to revoke tokens if needed without losing access.
 
 = How do I send peace to another site? =
-Use the peace hand button on your site or the provided shortcode. Enter the target site's URL and an optional note, then send peace. The other site must also have the Peace Protocol plugin installed and activated.
+To send peace or log in as your site, your site and the other WordPress site, must have this same plugin installed. Find the other site's peace hand emoji, tap it, enter your site's URL, and follow any prompts to log in.
 
 = What happens when I send peace? =
-Your site is subscribed to the other site's feed, allowing you to follow their updates. The handshake is logged and can be viewed in your admin area.
+Your site is subscribed to the other site's feed, allowing you to follow their updates, and you're logged in. If you send a note during the auth process, your note will be added to the other site's Peace Log.
 
 = Can I unsubscribe from a feed? =
 Yes, you can manage your subscribed feeds from the Peace Protocol settings page.
@@ -57,21 +58,18 @@ Yes, you can manage your subscribed feeds from the Peace Protocol settings page.
 = Is this plugin translation-ready? =
 Yes! All user-facing text is translatable, and translation files for several languages are included.
 
-= What features are planned for the future? =
-Future updates may include post liking, commenting, and other social features to further connect the WordPress ecosystem.
-
 == Screenshots ==
 1. Peace Protocol settings page: manage tokens and feeds.
 2. Send peace to another site with an optional note.
 3. View your peace log wall and see connections.
 
 == Changelog ==
-= 1.0.1 =
+= 1.0.2 =
 * Initial public release.
 * Send and receive peace handshakes between WordPress sites.
 * Token management and feed subscriptions.
 * Translation-ready with multiple languages included.
 
 == Upgrade Notice ==
-= 1.0.1 =
+= 1.0.2 =
 First public release of Peace Protocol. Connect your WordPress site to others and start building a decentralized network of trust. 
