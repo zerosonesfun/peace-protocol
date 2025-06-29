@@ -21,6 +21,12 @@ function peace_protocol_receive_peace($request) {
         return new WP_Error('invalid_token', 'Invalid token', array('status' => 403));
     }
     
+    // Check if the sending site's user is banned (for federated users)
+    if (function_exists('peace_protocol_is_user_banned') && peace_protocol_is_user_banned()) {
+        error_log('Peace Protocol REST: Banned user attempted to send peace');
+        return new WP_Error('user_banned', 'You are banned from sending peace', array('status' => 403));
+    }
+    
     error_log('Peace Protocol REST: Identity validated: ' . print_r($identity, true));
     
     // Save Peace Log directly (don't call send_peace_to_site which would create infinite loop)
@@ -101,6 +107,13 @@ add_action('rest_api_init', function() {
 // AJAX fallback for receiving peace (when REST API is disabled)
 add_action('wp_ajax_peace_protocol_receive_peace', function() {
     error_log('Peace Protocol: AJAX receive_peace handler called (logged in)');
+    
+    // Check if current user is banned
+    if (function_exists('peace_protocol_is_user_banned') && peace_protocol_is_user_banned()) {
+        error_log('Peace Protocol: Banned user attempted to receive peace via AJAX');
+        wp_send_json_error('You are banned from receiving peace', 403);
+    }
+    
     if (!isset($_POST['from_site']) || !isset($_POST['token']) || !isset($_POST['note'])) {
         error_log('Peace Protocol: AJAX missing required fields');
         wp_send_json_error('Missing required fields');

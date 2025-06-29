@@ -3,7 +3,7 @@
  * Plugin Name: Peace Protocol
  * Plugin URI: https://wilcosky.com/peace-protocol
  * Description: A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
- * Version: 1.0.2
+ * Version: 1.1.0
  * Requires at least: 6.0
  * Tested up to: 6.5
  * Requires PHP: 7.4
@@ -17,7 +17,7 @@
 
 defined('ABSPATH') || exit;
 
-define('PEACE_PROTOCOL_VERSION', '1.0.1');
+define('PEACE_PROTOCOL_VERSION', '1.1.0');
 define('PEACE_PROTOCOL_DIR', plugin_dir_path(__FILE__));
 define('PEACE_PROTOCOL_URL', plugin_dir_url(__FILE__));
 
@@ -27,6 +27,7 @@ require_once PEACE_PROTOCOL_DIR . 'includes/shortcodes.php';
 require_once PEACE_PROTOCOL_DIR . 'includes/frontend-button.php';
 require_once PEACE_PROTOCOL_DIR . 'includes/admin-pages.php';
 require_once PEACE_PROTOCOL_DIR . 'includes/federated-users.php';
+require_once PEACE_PROTOCOL_DIR . 'includes/user-banning.php';
 
 register_activation_hook(__FILE__, function () {
     if (!get_option('peace_tokens')) {
@@ -34,6 +35,12 @@ register_activation_hook(__FILE__, function () {
     }
     if (!get_option('peace_feeds')) {
         update_option('peace_feeds', []);
+    }
+    if (!get_option('peace_protocol_banned_users')) {
+        update_option('peace_protocol_banned_users', []);
+    }
+    if (!get_option('peace_protocol_ban_reasons')) {
+        update_option('peace_protocol_ban_reasons', []);
     }
     update_option('peace_tokens_last_rotation', current_time('mysql'));
     flush_rewrite_rules();

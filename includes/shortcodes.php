@@ -533,6 +533,29 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             // Function to show send peace modal
             window.peaceProtocolShowSendPeaceModal = function() {
                 console.log('[Peace Protocol] ShowSendPeaceModal called');
+                
+                // Check if user is banned (if we're on a banned page)
+                if (window.location.search.includes('peace_banned=1')) {
+                    console.log('[Peace Protocol] User is banned, cannot send peace');
+                    alert('You are banned from sending peace.');
+                    return;
+                }
+                
+                // Check localStorage for ban flag
+                if (localStorage.getItem('peace-protocol-banned') === 'true') {
+                    console.log('[Peace Protocol] User is banned (localStorage flag), cannot send peace');
+                    alert('You are banned from sending peace.');
+                    return;
+                }
+                
+                // Additional ban check - look for any ban indicators on the page
+                const bannedElements = document.querySelectorAll('.banned-message, [data-banned="true"]');
+                if (bannedElements.length > 0) {
+                    console.log('[Peace Protocol] User appears to be banned, cannot send peace');
+                    alert('You are banned from sending peace.');
+                    return;
+                }
+                
                 refreshIdentities();
                 console.log('[Peace Protocol] Selected identity:', selectedIdentity);
                 
