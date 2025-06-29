@@ -19,7 +19,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 ### **Admin-Only Authentication**
 - **WordPress Administrators Only**: This plugin is designed exclusively for WordPress site administrators
 - **Site-Level Authentication**: Admins authenticate as their website, not as individual users
-- **No User Registration**: No public user accounts or registration system
+- **No Public Registration**: No public user registration system - only federated users created after secure handshakes
 - **Cryptographic Tokens**: Each site uses cryptographically secure tokens for authentication
 
 ### **Federated User System**
@@ -100,7 +100,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 ## 🛡️ **Security Considerations**
 
 ### **What This Plugin Does NOT Do**
-- ❌ **No Public User Registration**: Only WordPress administrators can use this plugin
+- ❌ **No Public User Registration**: Only WordPress administrators can use this plugin (federated users are created automatically after secure handshakes)
 - ❌ **No Admin Access for Federated Users**: Federated users cannot access WordPress admin
 - ❌ **No Database Access**: Federated users cannot access sensitive site data
 - ❌ **No File System Access**: Federated users cannot upload or modify files
