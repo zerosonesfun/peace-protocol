@@ -9,9 +9,14 @@ delete_option('peace_feeds');
 delete_option('peace_tokens_last_rotation');
 delete_option('peace_last_sent');
 delete_option('peace_hide_auto_button');
+delete_option('peace_button_position');
 delete_option('peace_federated_codes');
 delete_option('peace_protocol_banned_users');
 delete_option('peace_protocol_ban_reasons');
+delete_option('peace_protocol_codes');
+delete_option('peace_protocol_version');
+delete_option('peace_protocol_js_version');
+delete_option('peace_token');
 
 // Clean up federated users
 $federated_users = get_users(array('role' => 'federated_peer'));

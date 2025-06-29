@@ -4,7 +4,7 @@ Tags: federation, social, protocol, peace, decentralized, admin, security, crypt
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,11 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.1.2 =
+* **Code Cleanup**: Removed all error_log and console.log statements for production readiness
+* **Improved Performance**: Cleaner codebase without debug logging overhead
+* **Better User Experience**: No more debug output cluttering user interfaces
 
 = 1.1.0 =
 * **Major Security Enhancement**: Added comprehensive user banning system

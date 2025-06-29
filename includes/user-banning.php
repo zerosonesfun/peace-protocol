@@ -258,7 +258,7 @@ add_action('init', function() {
     <script>
     // Clear all Peace Protocol data from localStorage when banned
     (function() {
-        console.log("[Peace Protocol] User is banned - clearing all Peace Protocol data");
+        // console.log("[Peace Protocol] User is banned - clearing all Peace Protocol data");
         
         // Clear Peace Protocol identities
         localStorage.removeItem("peace-protocol-identities");
@@ -296,7 +296,7 @@ add_action('init', function() {
                 return false;
             };
             
-            console.log("[Peace Protocol] All Peace Protocol functions blocked for banned user");
+            // console.log("[Peace Protocol] All Peace Protocol functions blocked for banned user");
         }
     })();
     </script>
@@ -385,7 +385,17 @@ add_action('template_redirect', function() {
                 // Clear ban flag if user is no longer banned
                 if (typeof localStorage !== "undefined" && localStorage.getItem("peace-protocol-banned") === "true") {
                     localStorage.removeItem("peace-protocol-banned");
-                    console.log("[Peace Protocol] Ban flag cleared - user is no longer banned");
+                    // console.log("[Peace Protocol] Ban flag cleared - user is no longer banned");
+                    
+                    // Restore Peace Protocol functions if they were overridden
+                    if (typeof window !== "undefined") {
+                        // Check if the functions were overridden by the ban logic
+                        if (window.peaceProtocolFederatedLogin && window.peaceProtocolFederatedLogin.toString().includes("You are banned")) {
+                            // console.log("[Peace Protocol] Restoring Peace Protocol functions after ban flag cleared");
+                            // The functions will be restored when the main frontend.js loads
+                            // We just need to clear the ban flag so the main functions can take over
+                        }
+                    }
                 }
                 </script>';
             });

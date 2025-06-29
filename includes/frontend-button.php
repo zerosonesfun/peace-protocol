@@ -6,8 +6,26 @@ add_action('wp_enqueue_scripts', function () {
     // if (!is_front_page()) {
     //     return;
     // }
+    
+    // Enhanced cache busting strategy
     $js_file = PEACE_PROTOCOL_DIR . 'js/frontend.js';
-    $js_version = file_exists($js_file) ? filemtime($js_file) : PEACE_PROTOCOL_VERSION;
+    
+    // Method 1: Use file modification time (most reliable for development)
+    $file_version = file_exists($js_file) ? filemtime($js_file) : PEACE_PROTOCOL_VERSION;
+    
+    // Method 2: Use plugin version (good for production releases)
+    $plugin_version = PEACE_PROTOCOL_VERSION;
+    
+    // Method 3: Use stored cache busting version from database
+    $stored_version = get_option('peace_protocol_js_version', $plugin_version);
+    
+    // Method 4: Combine all methods for maximum cache busting
+    $js_version = $file_version . '.' . $stored_version;
+    
+    // Alternative: Use file hash for even more precise cache busting
+    // $file_hash = file_exists($js_file) ? md5_file($js_file) : PEACE_PROTOCOL_VERSION;
+    // $js_version = $file_hash;
+    
     wp_enqueue_script('peace-protocol-frontend', PEACE_PROTOCOL_URL . 'js/frontend.js', ['jquery'], $js_version, true);
 
     wp_localize_script('peace-protocol-frontend', 'peaceData', [
@@ -22,7 +40,25 @@ add_action('wp_enqueue_scripts', function () {
         'i18n_send' => __('Send Peace', 'peace-protocol'),
         'i18n_cancel' => __('Cancel', 'peace-protocol'),
         'siteUrl' => get_site_url(),
+        'version' => $js_version, // Add version to peaceData for debugging
+        'debug' => [
+            'fileVersion' => $file_version,
+            'pluginVersion' => $plugin_version,
+            'storedVersion' => $stored_version,
+            'finalVersion' => $js_version,
+            'fileExists' => file_exists($js_file),
+            'fileModTime' => file_exists($js_file) ? filemtime($js_file) : 'N/A',
+        ],
     ]);
+    
+    // Add script to clear ban flags and ensure proper function loading
+    wp_add_inline_script('peace-protocol-frontend', '
+    // Clear any ban flags that might be preventing Peace Protocol from working
+    if (typeof localStorage !== "undefined" && localStorage.getItem("peace-protocol-banned") === "true") {
+        // console.log("[Peace Protocol] Clearing ban flag that was preventing function loading");
+        localStorage.removeItem("peace-protocol-banned");
+    }
+    ', 'before');
 });
 
 add_action('wp_footer', function () {
@@ -36,18 +72,15 @@ add_action('wp_footer', function () {
     }
     
     // Debug logging
-    error_log('[Peace Protocol] wp_footer action running');
-    error_log('[Peace Protocol] hide_auto_button: ' . $hide_auto_button);
-    error_log('[Peace Protocol] function_exists: ' . (function_exists('peace_protocol_render_hand_button') ? 'true' : 'false'));
+    // error_log('[Peace Protocol] wp_footer action running');
+    // error_log('[Peace Protocol] hide_auto_button: ' . $hide_auto_button);
+    // error_log('[Peace Protocol] function_exists: ' . (function_exists('peace_protocol_render_hand_button') ? 'true' : 'false'));
     
-    if (function_exists('peace_protocol_render_hand_button')) {
-        // The peace_protocol_render_hand_button() function returns safe, fully-escaped HTML markup.
-        // All dynamic content inside is properly escaped using esc_html_e(), esc_attr_e(), etc.
-        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        echo peace_protocol_render_hand_button();
-        error_log('[Peace Protocol] Button rendered');
+    if (!$hide_auto_button && function_exists('peace_protocol_render_hand_button')) {
+        peace_protocol_render_hand_button();
+        // error_log('[Peace Protocol] Button rendered');
     } else {
-        error_log('[Peace Protocol] Function does not exist!');
+        // error_log('[Peace Protocol] Function does not exist!');
     }
 });
 

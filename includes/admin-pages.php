@@ -26,7 +26,7 @@ function peace_protocol_admin_page()
         $return_site = esc_url_raw($_GET['peace_federated_return']);
         $state = sanitize_text_field($_GET['peace_federated_state']);
         
-        error_log('Peace Protocol Admin: Federated return detected - return_site: ' . $return_site . ', state: ' . $state);
+        // error_log('Peace Protocol Admin: Federated return detected - return_site: ' . $return_site . ', state: ' . $state);
         
         // Generate authorization code
         $auth_code = wp_generate_password(32, false);
@@ -42,7 +42,7 @@ function peace_protocol_admin_page()
         );
         update_option('peace_protocol_authorizations', $authorizations);
         
-        error_log('Peace Protocol Admin: Generated authorization code: ' . $auth_code . ' for return site: ' . $return_site);
+        // error_log('Peace Protocol Admin: Generated authorization code: ' . $auth_code . ' for return site: ' . $return_site);
         
         // Subscribe this site to the return site's feed
         peace_protocol_subscribe_to_feed($return_site);
@@ -52,7 +52,7 @@ function peace_protocol_admin_page()
         $separator = strpos($return_site, '?') !== false ? '&' : '?';
         $redirect .= $separator . 'peace_authorization_code=' . urlencode($auth_code) . '&peace_federated_site=' . urlencode(get_site_url()) . '&peace_federated_state=' . urlencode($state);
         
-        error_log('Peace Protocol Admin: Redirecting to: ' . $redirect);
+        // error_log('Peace Protocol Admin: Redirecting to: ' . $redirect);
         wp_redirect($redirect);
         exit;
     }
@@ -68,7 +68,7 @@ function peace_protocol_admin_page()
     // --- Handle POST actions before output ---
     if (isset($_POST['peace_protocol_generate_token']) && check_admin_referer('peace_protocol_generate_token')) {
         $tokens = get_option('peace_tokens', []);
-        $tokens[] = wp_generate_password(32, true, true);
+        $tokens[] = trim(wp_generate_password(32, true, true));
         update_option('peace_tokens', $tokens);
     }
 
@@ -169,7 +169,7 @@ function peace_protocol_admin_page()
                         
                         if (cleanedIdentities.length !== identities.length) {
                             localStorage.setItem(LS_KEY, JSON.stringify(cleanedIdentities));
-                            console.log('Peace Protocol: Cleaned up corrupted tokens from localStorage');
+                            // console.log('Peace Protocol: Cleaned up corrupted tokens from localStorage');
                         }
                     }
                 }
@@ -205,7 +205,7 @@ function peace_protocol_admin_page()
             let html = '<table class="widefat fixed striped"><thead><tr><th>Token</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
             tokens.forEach((token, i) => {
                 html += '<tr>';
-                html += '<td><code>' + token + '</code></td>';
+                html += '<td><code>' + token.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;') + '</code></td>';
                 html += '<td>' + (i === 0 ? '<span style="color:#2563eb;font-weight:bold;">Active (in localStorage)</span>' : '<span style="color:#888;">Inactive</span>') + '</td>';
                 html += '<td>';
                 if (tokens.length > 1) {
@@ -224,14 +224,14 @@ function peace_protocol_admin_page()
             html += '<div style="background: #f9f9f9; padding: 1em; border-radius: 4px; font-family: monospace; font-size: 12px;">';
             html += '<p><strong>Active Token (Database):</strong></p>';
             if (tokens.length > 0) {
-                html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + tokens[0] + '</p>';
+                html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + tokens[0].replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;') + '</p>';
                 html += '<p><strong>Token Length:</strong> ' + tokens[0].length + ' characters</p>';
             } else {
                 html += '<p style="color: #dc3232;">No tokens in database</p>';
             }
             
             html += '<p><strong>localStorage Identities:</strong></p>';
-            html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + JSON.stringify(identities, null, 2) + '</p>';
+            html += '<p style="word-break: break-all; background: #fff; padding: 0.5em; border: 1px solid #ddd;">' + JSON.stringify(identities, null, 2).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&/g, '&amp;') + '</p>';
             
             // Check if localStorage matches database
             const localStorageToken = identities.find(id => id.site === site)?.token;
@@ -438,44 +438,6 @@ function peace_protocol_admin_page()
         var messageDiv = document.getElementById('peace-protocol-message');
         var ajaxNonce = <?php echo wp_json_encode($ajax_nonce); ?>;
 
-        // Token rotation logic
-        if (tokens.length > 1) {
-            var idx = 0;
-            try {
-                var prev = JSON.parse(localStorage.getItem(peaceKey));
-                if (prev && prev.tokens && prev.tokens.length === tokens.length && prev.tokens[0] === tokens[0]) {
-                    idx = (prev._idx || 0) + 1;
-                }
-            } catch(e) {}
-            if (idx >= tokens.length) idx = 0;
-            tokens = tokens.slice(idx).concat(tokens.slice(0, idx));
-            data.tokens = tokens;
-            data._idx = idx;
-            // Update peace_tokens option in DB via AJAX
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', ajaxurl, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        if (response.success) {
-                            messageDiv.innerHTML = '<div class="notice notice-success" style="padding:10px;">Token rotated successfully.</div>';
-                        } else {
-                            messageDiv.innerHTML = '<div class="notice notice-error" style="padding:10px;">Token rotation failed: ' + (response.data || 'Unknown error') + '</div>';
-                        }
-                    } catch(e) {
-                        messageDiv.innerHTML = '<div class="notice notice-error" style="padding:10px;">Token rotation failed. Please reload the page.</div>';
-                    }
-                } else {
-                    messageDiv.innerHTML = '<div class="notice notice-error" style="padding:10px;">Token rotation failed. Please reload the page.</div>';
-                }
-            };
-            xhr.onerror = function() {
-                messageDiv.innerHTML = '<div class="notice notice-error" style="padding:10px;">Token rotation failed. Please check your connection.</div>';
-            };
-            xhr.send('action=peace_protocol_rotate_tokens&tokens=' + encodeURIComponent(JSON.stringify(tokens)) + '&nonce=' + encodeURIComponent(ajaxNonce));
-        }
         localStorage.setItem(peaceKey, JSON.stringify(data));
     })();
     </script>
@@ -563,8 +525,8 @@ function peace_protocol_delete_token_callback() {
     }
     
     // Debug logging
-    error_log('Peace Protocol: Attempting to delete token. Token to delete: ' . substr($token_to_delete, 0, 10) . '...');
-    error_log('Peace Protocol: Available tokens: ' . count($tokens));
+    // error_log('Peace Protocol: Attempting to delete token. Token to delete: ' . substr($token_to_delete, 0, 10) . '...');
+    // error_log('Peace Protocol: Available tokens: ' . count($tokens));
     
     // Check if token exists before trying to delete
     $token_found = false;
@@ -576,7 +538,7 @@ function peace_protocol_delete_token_callback() {
     }
     
     if (!$token_found) {
-        error_log('Peace Protocol: Token not found in database. Token to delete: ' . substr($token_to_delete, 0, 10) . '...');
+        // error_log('Peace Protocol: Token not found in database. Token to delete: ' . substr($token_to_delete, 0, 10) . '...');
         wp_send_json_error('Token not found in database', 404);
     }
     
@@ -589,7 +551,7 @@ function peace_protocol_delete_token_callback() {
     $tokens = array_values($tokens);
     
     update_option('peace_tokens', $tokens);
-    error_log('Peace Protocol: Token deleted successfully. Remaining tokens: ' . count($tokens));
+    // error_log('Peace Protocol: Token deleted successfully. Remaining tokens: ' . count($tokens));
     wp_send_json_success();
     wp_die();
 }

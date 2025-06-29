@@ -45,7 +45,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 break;
         }
         
-        ob_start();
+        // Since output buffering is already active, let's just output directly
         ?>
         <style>
             #peace-protocol-button {
@@ -217,8 +217,10 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 }
             }
         </style>
-        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>">✌️</button>
-
+        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>" style="position: fixed; <?php echo esc_attr($position_css); ?> background: transparent; border: none; font-size: 2rem; cursor: pointer; z-index: 99999;">✌️</button>
+        <?php
+        echo '<!-- Peace Protocol: Button HTML output -->';
+        ?>
         <div id="peace-modal" role="dialog" aria-modal="true" aria-labelledby="peace-modal-title">
             <div id="peace-modal-content">
                 <h2 id="peace-modal-title"><?php esc_html_e('Give Peace?', 'peace-protocol'); ?></h2>
@@ -237,6 +239,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 </div>
             </div>
         </div>
+        <?php
+        echo '<!-- Peace Protocol: Modal HTML output -->';
+        ?>
         <div id="peace-success-modal" role="dialog" aria-modal="true" aria-labelledby="peace-success-title" style="display:none;">
             <div id="peace-modal-content">
                 <h2 id="peace-success-title"><?php esc_html_e('Peace Sent!', 'peace-protocol'); ?></h2>
@@ -246,6 +251,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 </div>
             </div>
         </div>
+        <?php
+        echo '<!-- Peace Protocol: Success modal HTML output -->';
+        ?>
         <div id="peace-federated-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100001;align-items:center;justify-content:center;">
           <div id="peace-federated-modal-content" style="max-width:400px;padding:1rem;border-radius:0.5rem;">
             <h2><?php esc_html_e('Log in as your site', 'peace-protocol'); ?></h2>
@@ -266,6 +274,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             </div>
           </div>
         </div>
+        <?php
+        echo '<!-- Peace Protocol: Federated modal HTML output -->';
+        ?>
         <div id="peace-redirect-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100002;align-items:center;justify-content:center;">
           <div id="peace-redirect-modal-content" style="background:#fff;max-width:500px;padding:1.5rem;border-radius:0.5rem;color:#333;text-align:center;">
             <h2><?php esc_html_e('Start Peace Protocol', 'peace-protocol'); ?></h2>
@@ -281,6 +292,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             <button id="peace-redirect-cancel" class="button">Cancel</button>
           </div>
         </div>
+        <?php
+        echo '<!-- Peace Protocol: Redirect modal HTML output -->';
+        ?>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Define ajaxurl for AJAX fallbacks
@@ -314,20 +328,14 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     authorizations = [];
                 }
                 
-                console.log('[Peace Protocol] refreshIdentities - identities:', identities);
-                console.log('[Peace Protocol] refreshIdentities - authorizations:', authorizations);
-                
-                // If we have federated authorizations, use the first one as selectedIdentity
                 if (authorizations.length > 0) {
                     const federatedSite = authorizations[0].site;
-                    console.log('[Peace Protocol] Using federated site as selectedIdentity:', federatedSite);
                     
                     // Find or create identity for the federated site
                     let federatedIdentity = identities.find(id => id.site === federatedSite);
                     if (!federatedIdentity) {
                         // Create a placeholder identity for the federated site
                         federatedIdentity = { site: federatedSite, token: 'federated-auth' };
-                        console.log('[Peace Protocol] Created placeholder identity for federated site');
                     }
                     
                     selectedIdentity = federatedIdentity;
@@ -339,7 +347,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     }
                 }
                 
-                console.log('[Peace Protocol] Final selectedIdentity:', selectedIdentity);
                 return identities;
             }
 
@@ -384,22 +391,12 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                         authorizations = [];
                     }
                     
-                    console.log('[Peace Protocol] Available authorizations:', authorizations);
-                    console.log('[Peace Protocol] Selected identity site:', selectedIdentity.site);
-                    console.log('[Peace Protocol] Selected identity:', selectedIdentity);
-                    
                     // Find authorization for the selected identity site
                     const auth = authorizations.find(a => a.site === selectedIdentity.site);
                     
-                    console.log('[Peace Protocol] Found authorization:', auth);
-                    
                     if (!auth) {
-                        console.error('[Peace Protocol] No authorization found for site:', selectedIdentity.site);
-                        console.error('[Peace Protocol] Available authorizations:', authorizations);
                         throw new Error('No authorization found for site ' + selectedIdentity.site + '. Please authenticate first.');
                     }
-                    
-                    console.log('[Peace Protocol] Using authorization code:', auth.code, 'for site:', selectedIdentity.site);
                     
                     // Since siteA authenticated and provided a valid authorization code,
                     // we can trust that siteA is authorized to send peace on behalf of the user.
@@ -462,8 +459,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 } catch (err) {
                     // Check if this is a token error (403)
                     if (err.message && (err.message.includes('403') || err.message.includes('Invalid token'))) {
-                        console.log('[Peace Protocol] Token appears to be invalid, clearing and requesting new federated login');
-                        
                         // Remove the invalid token from localStorage
                         let identities = window.peaceProtocolGetIdentities ? window.peaceProtocolGetIdentities() : [];
                         identities = identities.filter(id => id.site !== selectedIdentity.site);
@@ -520,7 +515,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 
                 // Handle redirect link click
                 redirectLink.onclick = function(e) {
-                    console.log('[Peace Protocol] Redirect link clicked, going to:', url);
                     // The link will open in new tab due to target="_blank"
                 };
                 
@@ -532,18 +526,14 @@ if (!function_exists('peace_protocol_render_hand_button')) {
 
             // Function to show send peace modal
             window.peaceProtocolShowSendPeaceModal = function() {
-                console.log('[Peace Protocol] ShowSendPeaceModal called');
-                
                 // Check if user is banned (if we're on a banned page)
                 if (window.location.search.includes('peace_banned=1')) {
-                    console.log('[Peace Protocol] User is banned, cannot send peace');
                     alert('You are banned from sending peace.');
                     return;
                 }
                 
                 // Check localStorage for ban flag
                 if (localStorage.getItem('peace-protocol-banned') === 'true') {
-                    console.log('[Peace Protocol] User is banned (localStorage flag), cannot send peace');
                     alert('You are banned from sending peace.');
                     return;
                 }
@@ -551,16 +541,13 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 // Additional ban check - look for any ban indicators on the page
                 const bannedElements = document.querySelectorAll('.banned-message, [data-banned="true"]');
                 if (bannedElements.length > 0) {
-                    console.log('[Peace Protocol] User appears to be banned, cannot send peace');
                     alert('You are banned from sending peace.');
                     return;
                 }
                 
                 refreshIdentities();
-                console.log('[Peace Protocol] Selected identity:', selectedIdentity);
                 
                 if (selectedIdentity && selectedIdentity.token && selectedIdentity.site) {
-                    console.log('[Peace Protocol] Showing send peace modal with identity:', selectedIdentity.site);
                     document.getElementById('peace-modal-title').textContent = 'Send Peace?';
                     document.getElementById('peace-modal-question').textContent = 'You may send a message to this site below.';
                     noteEl.style.display = 'block';
@@ -571,7 +558,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     modal.style.display = 'flex';
                     resetNoteCounter();
                 } else {
-                    console.log('[Peace Protocol] No valid identity found, showing federated login modal');
                     // No identity found, show federated login modal instead
                     if (window.peaceProtocolShowFederatedModal) {
                         window.peaceProtocolShowFederatedModal(function(domain) {
@@ -599,7 +585,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                   return;
                 }
                 federatedModal.style.display = 'none';
-                console.log('[Peace Protocol] Federated modal submit, domain:', domain);
                 if (cb) cb(domain);
               };
               federatedCancel.onclick = function() {
@@ -640,7 +625,8 @@ if (!function_exists('peace_protocol_render_hand_button')) {
         });
         </script>
         <?php
-        return ob_get_clean();
+        // Since we're outputting directly, just return empty string
+        return '';
     }
 }
 
