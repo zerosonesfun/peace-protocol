@@ -1,93 +1,180 @@
 # Peace Protocol
 
-A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
+**A secure, decentralized protocol for WordPress administrators to connect their sites and build a network of trust through cryptographic handshakes.**
 
-## Features
+Peace Protocol enables WordPress site administrators to authenticate as their website and send cryptographically signed "peace" messages to other WordPress sites running the same protocol. This creates a decentralized network where admins can establish trust relationships, share peace, and enable cross-site interactions.
 
-- **Peace Handshakes**: Send peace messages to other WordPress sites
-- **Token Management**: Secure token-based authentication with rotation
-- **Federated Login**: Cross-site user authentication for seamless commenting
-- **Feed Subscription**: Automatically subscribe to peace feeds from other sites
-- **Admin Interface**: Easy token management and feed monitoring
+## 🔒 **Security-First Design**
 
-## Federated Login Feature
+### **Admin-Only Authentication**
+- **WordPress Administrators Only**: This plugin is designed exclusively for WordPress site administrators
+- **Site-Level Authentication**: Admins authenticate as their website, not as individual users
+- **No User Registration**: No public user accounts or registration system
+- **Cryptographic Tokens**: Each site uses cryptographically secure tokens for authentication
 
-### Overview
+### **Federated User System**
+- **Limited Permissions**: Federated users can only comment on posts, no admin access
+- **Automatic Cleanup**: Federated users are removed when the plugin is uninstalled
+- **Role-Based Security**: Federated users have the `federated_peer` role with minimal capabilities
+- **No Dashboard Access**: Federated users cannot access WordPress admin areas
 
-The Peace Protocol includes a powerful federated login system that allows users from remote sites to comment on your WordPress site as their own site identity, after completing a secure handshake.
+### **Token Security**
+- **Cryptographically Secure**: Tokens are generated using WordPress's secure password generator
+- **Token Rotation**: Support for multiple tokens with automatic rotation
+- **Secure Storage**: Tokens are stored securely in WordPress options
+- **Expiring Authorization Codes**: Authorization codes expire after 5 minutes
 
-### How It Works
+## 🌟 **Key Features**
 
-1. **Federated Handshake**: When a user from a remote site completes the Peace Protocol handshake, your site receives a verification code and the remote site's domain.
+### **Core Functionality**
+- **Send Peace**: Send cryptographically signed peace messages to other WordPress sites
+- **Peace Log Wall**: Display received peace messages using the `[peace_log_wall]` shortcode
+- **Automatic Feed Subscription**: Automatically subscribe to peace feeds from sites you connect with
+- **Token Management**: Generate, rotate, and manage authentication tokens
+- **User Banning System**: Ban problematic users with reason tracking
 
-2. **Federated User Creation & Login**: The plugin creates (or reuses) a special "federated peer" WordPress user for that remote site (e.g., `federated_example_com` for `example.com`). This user cannot access the dashboard or admin, only the front end.
+### **Federated Login System**
+- **Cross-Site Authentication**: Users from remote sites can comment as their site identity
+- **Seamless Integration**: Works with existing WordPress comment systems
+- **Secure Handshake**: Only sites completing the cryptographic handshake can create federated logins
+- **Automatic User Creation**: Creates federated users automatically after successful handshake
 
-3. **Automatic Sign-in**: The plugin logs in the remote user as the federated user, so they are "signed in" for the session.
+### **Admin Interface**
+- **Token Management**: Generate, view, and delete authentication tokens
+- **Feed Management**: View and manage subscribed peace feeds
+- **Peace Log**: View all received peace messages in the admin area
+- **User Banning**: Ban users with reason tracking and management
+- **Settings Configuration**: Configure button position and auto-insertion
 
-4. **Comment Attribution**: When the federated user leaves a comment, it is attributed to the remote site (e.g., "Logged in as example.com"), enabling seamless cross-site conversation.
+### **Frontend Features**
+- **Peace Button**: Floating peace hand button (✌️) that can be positioned anywhere
+- **Auto-Insertion**: Automatically insert the peace button on your site
+- **Shortcode Support**: Use `[peace_hand_button]` to manually place the button
+- **Responsive Design**: Works on all devices and screen sizes
+- **Dark Mode Support**: Automatically adapts to user's color scheme preference
 
-5. **Cleanup**: All federated users are removed if the plugin is uninstalled.
+### **Technical Features**
+- **REST API**: Modern REST API endpoints for all functionality
+- **AJAX Fallback**: AJAX endpoints for sites with REST API disabled
+- **CORS Support**: Proper CORS headers for cross-site communication
+- **Translation Ready**: Full internationalization support with multiple languages
+- **Custom Post Types**: Uses custom post types for peace logs
 
-### Security Features
+## 🚀 **How It Works**
 
-- **Role-Based Access**: Federated users have the `federated_peer` role with minimal permissions
-- **Admin Blocking**: Federated users cannot access the WordPress admin area
-- **Secure Handshake**: Only sites completing the handshake can create federated logins
-- **Automatic Cleanup**: Federated users are removed on plugin uninstall
+### **For WordPress Administrators**
 
-### Technical Implementation
+1. **Install & Activate**: Install the plugin and activate it on your WordPress site
+2. **Generate Tokens**: Go to Settings > Peace Protocol and generate authentication tokens
+3. **Send Peace**: Use the peace button to send cryptographically signed peace to other sites
+4. **Build Network**: Connect with other WordPress sites and build a network of trust
 
-- A new role `federated_peer` is registered with minimal capabilities
-- After handshake validation (`peace_authorization_code` and `peace_federated_site` in the URL), the plugin creates/logs in the federated user
-- Admin/backend access is blocked for federated users
-- The process is fully automatic—no additional user action is required after handshake
+### **Federated Login Process**
 
-### User Experience
+1. **User from Site A** visits Site B and wants to comment
+2. **User clicks "Send Peace"** button on Site B
+3. **Site B redirects** to Site A for authentication
+4. **Site A validates** the user and generates an authorization code
+5. **User is redirected** back to Site B with the authorization code
+6. **Site B automatically** logs in the user as a federated user from Site A
+7. **User can comment** on Site B as "Logged in as sitea.com"
 
-1. User from SiteA visits SiteB and wants to comment
-2. User clicks "Send Peace" button on SiteB
-3. SiteB redirects to SiteA for authentication
-4. SiteA validates the user and generates an authorization code
-5. User is redirected back to SiteB with the authorization code
-6. SiteB automatically logs in the user as a federated user from SiteA
-7. User can now comment on SiteB as "Logged in as sitea.com"
+### **Security Flow**
 
-This enables federated, cross-site commenting in a secure and native-feeling way for WordPress users!
+1. **Cryptographic Handshake**: Sites exchange cryptographically signed tokens
+2. **Token Validation**: Each peace message is validated using secure tokens
+3. **Federated User Creation**: Only after successful handshake are federated users created
+4. **Limited Permissions**: Federated users have minimal permissions and no admin access
+5. **Automatic Cleanup**: All federated data is removed on plugin uninstall
 
-## Installation
+## 📋 **Requirements**
 
-1. Upload the plugin files to `/wp-content/plugins/peace-protocol/`
-2. Activate the plugin through the 'Plugins' screen in WordPress
-3. Go to Settings > Peace Protocol to configure tokens and view feeds
+- **WordPress**: 6.0 or higher
+- **PHP**: 7.4 or higher
+- **Permissions**: Administrator access to WordPress site
+- **Network**: Sites must be able to communicate via HTTP/HTTPS
 
-## Usage
+## 🔧 **Installation**
 
-### Generating Tokens
+1. **Upload** the plugin files to `/wp-content/plugins/peace-protocol/`
+2. **Activate** the plugin through the 'Plugins' screen in WordPress
+3. **Configure** by going to Settings > Peace Protocol
+4. **Generate Tokens** for site authentication
+5. **Customize** button position and auto-insertion settings
 
-1. Go to Settings > Peace Protocol
-2. Click "Generate New Token" to create a new authentication token
-3. Use these tokens to authenticate your site when sending peace to other sites
+## 📖 **Usage**
 
-### Sending Peace
+### **Basic Setup**
+```php
+// The peace button is automatically inserted on your site
+// Or use the shortcode: [peace_hand_button]
+// Display peace log wall: [peace_log_wall]
+```
 
-1. Use the `[peace_button]` shortcode or the automatically inserted button
+### **Token Management**
+- Generate at least 3 tokens for security
+- Rotate tokens regularly
+- Keep tokens secure and private
+- Delete old tokens when no longer needed
+
+### **Sending Peace**
+1. Click the peace button (✌️) on your site
 2. Enter the target site URL
-3. Write your peace message
-4. Click send
+3. Add an optional note (max 50 characters)
+4. Click "Send Peace"
 
-### Managing Feeds
-
-- View subscribed peace feeds in the admin interface
+### **Managing Feeds**
+- View subscribed feeds in Settings > Peace Protocol
 - Unsubscribe from feeds you no longer want to follow
 - Feeds are automatically added when you send peace to new sites
 
-## Security
+## 🛡️ **Security Considerations**
 
-- Tokens are cryptographically secure and randomly generated
-- Authorization codes expire after 5 minutes
-- Federated users have minimal permissions and cannot access admin areas
-- All authentication is validated server-side
+### **What This Plugin Does NOT Do**
+- ❌ **No Public User Registration**: Only WordPress administrators can use this plugin
+- ❌ **No Admin Access for Federated Users**: Federated users cannot access WordPress admin
+- ❌ **No Database Access**: Federated users cannot access sensitive site data
+- ❌ **No File System Access**: Federated users cannot upload or modify files
+- ❌ **No Plugin/Theme Management**: Federated users cannot install or modify plugins/themes
 
-## Support
+### **What This Plugin DOES Do**
+- ✅ **Site-to-Site Authentication**: WordPress admins authenticate as their website
+- ✅ **Cryptographic Verification**: All peace messages are cryptographically signed
+- ✅ **Limited Federated Access**: Federated users can only comment on posts
+- ✅ **Automatic Cleanup**: All federated data is removed on uninstall
+- ✅ **Secure Token Management**: Tokens are cryptographically secure and can be rotated
 
-For support and questions, please visit the plugin's GitHub repository or contact the author.
+## 🌍 **Internationalization**
+
+Peace Protocol is fully translation-ready and includes translations for:
+- English (default)
+- Spanish (es_ES)
+- French (fr_FR)
+- Japanese (ja)
+- Chinese Simplified (zh_CN)
+
+## 🔮 **Future Plans**
+
+- **Post Liking**: Like posts across federated sites
+- **Enhanced Commenting**: Rich comment interactions
+- **Site Discovery**: Automatic discovery of Peace Protocol sites
+- **Advanced Federation**: More sophisticated federated features
+
+## 🤝 **Contributing**
+
+We welcome contributions! Please see our contributing guidelines and code of conduct.
+
+## 📄 **License**
+
+This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 **Support**
+
+For support, questions, or security concerns:
+- **GitHub Issues**: [Create an issue](https://github.com/wilcosky/peace-protocol/issues)
+- **Author Website**: [wilcosky.com](https://wilcosky.com)
+- **Security**: For security issues, please contact the author directly
+
+---
+
+**Peace Protocol** - Building a decentralized network of trust, one WordPress site at a time. ✌️
