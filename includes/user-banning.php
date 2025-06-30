@@ -151,7 +151,7 @@ add_action('admin_footer-users.php', function() {
             formData.append('user_id', banUserId.value);
             formData.append('ban_action', banAction.value);
             formData.append('reason', banReason.value);
-            formData.append('nonce', '<?php echo wp_create_nonce('peace_protocol_ban_user'); ?>');
+            formData.append('nonce', '<?php echo esc_js(wp_create_nonce('peace_protocol_ban_user')); ?>');
             
             fetch(ajaxurl, {
                 method: 'POST',
@@ -177,6 +177,7 @@ add_action('admin_footer-users.php', function() {
 
 // Handle banned user page - SIMPLE VERSION
 add_action('init', function() {
+    // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only operation, no data modification
     if (isset($_GET['peace_banned']) && $_GET['peace_banned'] === '1') {
         // Output a simple banned page and exit
         header('Content-Type: text/html; charset=utf-8');
@@ -232,7 +233,9 @@ add_action('init', function() {
         
         // Get ban reason if available - try to get user ID from URL first
         $user_id = null;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only operation, no data modification
         if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) {
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only operation, no data modification
             $user_id = intval($_GET['user_id']);
         } else {
             // Fallback to current user if they\'re still logged in
@@ -482,6 +485,7 @@ add_filter('manage_users_custom_column', function($value, $column_name, $user_id
 // Helper function to check if current user is banned
 function peace_protocol_is_user_banned() {
     // Check if we're on the banned page
+    // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only operation, no data modification
     if (isset($_GET['peace_banned']) && $_GET['peace_banned'] === '1') {
         return true;
     }

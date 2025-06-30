@@ -106,7 +106,7 @@ add_action('rest_api_init', function () {
 
 // AJAX handler for subscribing to a feed after sending peace (backup for sites with REST API disabled)
 add_action('wp_ajax_peace_protocol_subscribe_feed', function() {
-    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'peace_protocol_subscribe_feed')) {
+    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'peace_protocol_subscribe_feed')) {
         wp_send_json_error('Missing feed_url or invalid nonce');
     }
     $feed_url = esc_url_raw(wp_unslash($_POST['feed_url']));
@@ -122,7 +122,7 @@ add_action('wp_ajax_peace_protocol_subscribe_feed', function() {
 });
 
 add_action('wp_ajax_nopriv_peace_protocol_subscribe_feed', function() {
-    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'peace_protocol_subscribe_feed')) {
+    if (!isset($_POST['feed_url']) || !isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'peace_protocol_subscribe_feed')) {
         wp_send_json_error('Missing feed_url or invalid nonce');
     }
     $feed_url = esc_url_raw(wp_unslash($_POST['feed_url']));

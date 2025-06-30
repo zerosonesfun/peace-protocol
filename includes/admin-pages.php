@@ -23,8 +23,8 @@ function peace_protocol_admin_page()
 
     // Handle federated return parameters
     if (isset($_GET['peace_federated_return']) && isset($_GET['peace_federated_state'])) {
-        $return_site = esc_url_raw($_GET['peace_federated_return']);
-        $state = sanitize_text_field($_GET['peace_federated_state']);
+        $return_site = esc_url_raw(wp_unslash($_GET['peace_federated_return']));
+        $state = sanitize_text_field(wp_unslash($_GET['peace_federated_state']));
         
         // error_log('Peace Protocol Admin: Federated return detected - return_site: ' . $return_site . ', state: ' . $state);
         
@@ -74,7 +74,7 @@ function peace_protocol_admin_page()
 
     if (isset($_POST['peace_protocol_save_settings']) && check_admin_referer('peace_protocol_settings')) {
         $hide_auto_button = isset($_POST['peace_hide_auto_button']) ? '1' : '0';
-        $button_position = sanitize_text_field($_POST['peace_button_position']);
+        $button_position = isset($_POST['peace_button_position']) ? sanitize_text_field(wp_unslash($_POST['peace_button_position'])) : 'top-right';
         update_option('peace_hide_auto_button', $hide_auto_button);
         update_option('peace_button_position', $button_position);
         echo '<div class="updated"><p>' . esc_html__('Settings saved.', 'peace-protocol') . '</p></div>';
@@ -487,8 +487,10 @@ function peace_protocol_rotate_tokens_callback() {
     }
     
     // Get raw tokens and decode HTML entities
+    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Tokens contain special characters, processed safely with wp_unslash and html_entity_decode
     $tokens_raw = wp_unslash($_POST['tokens']);
     $tokens_raw = html_entity_decode($tokens_raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Tokens contain special characters, processed safely with wp_unslash and html_entity_decode
     
     $tokens = json_decode($tokens_raw, true);
     if (!is_array($tokens)) {

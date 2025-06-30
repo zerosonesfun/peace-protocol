@@ -50,7 +50,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
         <style>
             #peace-protocol-button {
                 position: fixed;
-                <?php echo $position_css; ?>
+                <?php echo esc_html($position_css); ?>
                 background: transparent;
                 border: none;
                 font-size: 2rem;
@@ -217,7 +217,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 }
             }
         </style>
-        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>" style="position: fixed; <?php echo esc_attr($position_css); ?> background: transparent; border: none; font-size: 2rem; cursor: pointer; z-index: 99999;">✌️</button>
+        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>" style="position: fixed; <?php echo esc_html($position_css); ?> background: transparent; border: none; font-size: 2rem; cursor: pointer; z-index: 99999;">✌️</button>
         <?php
         echo '<!-- Peace Protocol: Button HTML output -->';
         ?>
@@ -234,7 +234,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 </div>
                 <div style="margin-top:0.7em;text-align:right;">
                     <a href="#" id="peace-switch-site-link" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
-                        <?php esc_html_e('', 'peace-protocol'); ?>
+                        <?php /* esc_html_e('', 'peace-protocol'); */ ?>
                     </a>
                 </div>
             </div>
@@ -266,7 +266,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             <div id="peace-federated-error" style="color:#b91c1c;font-size:0.97em;margin-top:0.5em;display:none;"></div>
             <div style="margin-top:1em;text-align:center;border-top:1px solid #eee;padding-top:1em;">
               <a href="#" id="peace-send-as-current-site" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
-                <?php esc_html_e('', 'peace-protocol'); ?>
+                <?php /* esc_html_e('', 'peace-protocol'); */ ?>
               </a>
               <a href="https://github.com/zerosonesfun/peace-protocol" id="what-is-peace-protocol" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
                 <?php esc_html_e('What is this?', 'peace-protocol'); ?>

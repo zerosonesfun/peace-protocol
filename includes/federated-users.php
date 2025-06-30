@@ -82,7 +82,7 @@ add_action('init', function() {
 // Block admin access for federated users
 add_action('admin_init', function() {
     if (is_user_logged_in() && current_user_can('federated_peer') && !current_user_can('manage_options')) {
-        wp_die(__('Access denied. Federated users cannot access the admin area.', 'peace-protocol'), 403);
+        wp_die(esc_html__('Access denied. Federated users cannot access the admin area.', 'peace-protocol'), 403);
     }
 });
 
@@ -98,7 +98,7 @@ function peace_protocol_get_or_create_federated_user($site_url) {
     // error_log('Peace Protocol: get_or_create_federated_user called with site_url: ' . $site_url);
     
     // Parse domain from site URL
-    $parsed_url = parse_url($site_url);
+    $parsed_url = wp_parse_url($site_url);
     if (!$parsed_url || !isset($parsed_url['host'])) {
         // error_log('Peace Protocol: Failed to parse domain from site_url: ' . $site_url);
         return false;
@@ -237,6 +237,7 @@ function peace_protocol_handle_federated_auth_return($auth_code, $federated_site
 add_filter('comment_form_defaults', function($defaults) {
     if (is_user_logged_in() && current_user_can('federated_peer') && !current_user_can('manage_options')) {
         $current_user = wp_get_current_user();
+        // translators: %s is the display name of the currently logged-in user.
         $defaults['title_reply'] = sprintf(__('Logged in as %s', 'peace-protocol'), $current_user->display_name);
     }
     return $defaults;

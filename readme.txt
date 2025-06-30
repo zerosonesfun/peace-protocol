@@ -1,10 +1,10 @@
 === Peace Protocol ===
 Contributors: wilcosky
-Tags: federation, social, protocol, peace, decentralized, admin, security, cryptographic, handshake
+Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,12 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.1.3 =
+* **Code Quality**: Fixed PHP syntax errors and improved code structure
+* **PHPCS Compliance**: Added file-level PHPCS ignore comments for cross-site REST API endpoints
+* **Security**: Maintained token-based authentication security model
+* **Bug Fixes**: Resolved brace matching issues in template_redirect function
 
 = 1.1.2 =
 * **Code Cleanup**: Removed all error_log and console.log statements for production readiness
