@@ -1006,6 +1006,13 @@ add_action('template_redirect', function() {
                     return;
                 }
                 
+                // Subscribe to the target site's feed
+                var targetSite = clientId; // The client_id is the target site URL
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '<?php echo admin_url('admin-ajax.php'); ?>', true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.send('action=peace_protocol_subscribe_feed&feed_url=' + encodeURIComponent(targetSite) + '&nonce=' + encodeURIComponent('<?php echo wp_create_nonce('peace_protocol_subscribe_feed'); ?>'));
+                
                 // Clean up localStorage
                 localStorage.removeItem('peace-indieauth-client-id');
                 localStorage.removeItem('peace-indieauth-state');
@@ -1018,7 +1025,7 @@ add_action('template_redirect', function() {
 
                 
                 // Build the authorization URL according to IndieAuth spec
-                var authUrl = new URL(authEndpoint);
+                var authUrl = new URL('<?php echo home_url('/peace-indieauth-authorization/'); ?>');
                 authUrl.searchParams.set('response_type', 'code');
                 authUrl.searchParams.set('client_id', clientId);
                 authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -1088,6 +1095,13 @@ add_action('template_redirect', function() {
                 alert('Missing authentication parameters. Please try the IndieAuth flow again from the original site.');
                 return;
             }
+            
+            // Subscribe to the target site's feed
+            var targetSite = clientId; // The client_id is the target site URL
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '<?php echo admin_url('admin-ajax.php'); ?>', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.send('action=peace_protocol_subscribe_feed&feed_url=' + encodeURIComponent(targetSite) + '&nonce=' + encodeURIComponent('<?php echo wp_create_nonce('peace_protocol_subscribe_feed'); ?>'));
             
             // Clean up localStorage
             localStorage.removeItem('peace-indieauth-client-id');

@@ -4,7 +4,7 @@ Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -206,6 +206,11 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.2.1 =
+* **Bug Fix**: Fixed redirect bug in IndieAuth flow when user is already logged in
+* **Feature**: Added automatic feed subscription to IndieAuth flow (matching regular Peace Protocol behavior)
+* **UX Improvement**: IndieAuth completion now works consistently whether user is logged in or not
 
 = 1.2.0 =
 * **Major Feature**: Added IndieAuth support as an alternative authentication method
