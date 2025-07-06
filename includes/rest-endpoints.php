@@ -105,6 +105,167 @@ add_action('rest_api_init', function() {
     }, 10, 3);
 });
 
+// Discover IndieAuth metadata from a URL (server-side version) - moved here to avoid function order issues
+function peace_protocol_discover_indieauth_metadata($url) {
+    error_log("Peace Protocol: Starting server-side IndieAuth discovery for: {$url}");
+    
+    try {
+        // Fetch the URL to find indieauth-metadata link
+        $response = wp_remote_get($url, array(
+            'timeout' => 30,
+            'headers' => array(
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            )
+        ));
+    
+    if (is_wp_error($response)) {
+        error_log('Peace Protocol: Failed to fetch URL for IndieAuth discovery: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $status_code = wp_remote_retrieve_response_code($response);
+    error_log("Peace Protocol: HTTP response status for {$url}: {$status_code}");
+    
+    if ($status_code !== 200) {
+        error_log("Peace Protocol: HTTP {$status_code} when fetching URL for IndieAuth discovery: {$url}");
+        return false;
+    }
+    
+    // Look for indieauth-metadata in Link headers first
+    $link_header = wp_remote_retrieve_header($response, 'Link');
+    error_log("Peace Protocol: Link header found: " . (is_array($link_header) ? json_encode($link_header) : $link_header));
+    $metadata_url = null;
+    
+    if ($link_header) {
+        // Handle case where Link header is an array (multiple Link headers)
+        if (is_array($link_header)) {
+            $link_header = implode(', ', $link_header);
+        }
+        
+        $links = explode(',', $link_header);
+        error_log("Peace Protocol: Parsed links: " . json_encode($links));
+        
+        foreach ($links as $link) {
+            $parts = explode(';', $link);
+            $link_url = trim($parts[0], ' <>');
+            $rel = '';
+            
+            foreach ($parts as $part) {
+                if (strpos($part, 'rel=') === 0) {
+                    $rel = trim($part, ' "');
+                    $rel = str_replace('rel=', '', $rel);
+                    break;
+                }
+            }
+            
+            error_log("Peace Protocol: Link - URL: {$link_url}, rel: {$rel}");
+            
+            if ($rel === 'indieauth-metadata') {
+                $metadata_url = $link_url;
+                error_log("Peace Protocol: Found indieauth-metadata URL: {$metadata_url}");
+                break;
+            }
+        }
+    }
+    
+    // Get HTML body for parsing if needed
+    $html = wp_remote_retrieve_body($response);
+    
+    // If no Link header, parse HTML for <link> tags
+    if (!$metadata_url) {
+        // Simple regex to find link tags (for simplicity, not full HTML parsing)
+        if (preg_match('/<link[^>]*rel=["\']indieauth-metadata["\'][^>]*href=["\']([^"\']+)["\'][^>]*>/i', $html, $matches)) {
+            $metadata_url = $matches[1];
+            // Make sure it's an absolute URL
+            if (!filter_var($metadata_url, FILTER_VALIDATE_URL)) {
+                $metadata_url = rtrim($url, '/') . '/' . ltrim($metadata_url, '/');
+            }
+        }
+    }
+    
+    // If still no metadata URL, try legacy discovery
+    if (!$metadata_url) {
+        // Try to find authorization_endpoint directly in Link headers
+        if ($link_header) {
+            // Handle case where Link header is an array (multiple Link headers)
+            if (is_array($link_header)) {
+                $link_header = implode(', ', $link_header);
+            }
+            
+            $links = explode(',', $link_header);
+            foreach ($links as $link) {
+                $parts = explode(';', $link);
+                $link_url = trim($parts[0], ' <>');
+                $rel = '';
+                
+                foreach ($parts as $part) {
+                    if (strpos($part, 'rel=') === 0) {
+                        $rel = trim($part, ' "');
+                        $rel = str_replace('rel=', '', $rel);
+                        break;
+                    }
+                }
+                
+                if ($rel === 'authorization_endpoint') {
+                    return array(
+                        'authorization_endpoint' => $link_url,
+                        'token_endpoint' => null
+                    );
+                }
+            }
+        }
+        
+        // Try HTML link elements for legacy discovery
+        if (preg_match('/<link[^>]*rel=["\']authorization_endpoint["\'][^>]*href=["\']([^"\']+)["\'][^>]*>/i', $html, $matches)) {
+            return array(
+                'authorization_endpoint' => $matches[1],
+                'token_endpoint' => null
+            );
+        }
+        
+        error_log("Peace Protocol: No IndieAuth metadata or authorization endpoint found for: {$url}");
+        return false;
+    }
+    
+    // Fetch the metadata document
+    $metadata_response = wp_remote_get($metadata_url, array(
+        'timeout' => 30,
+        'headers' => array(
+            'Accept' => 'application/json'
+        )
+    ));
+    
+    if (is_wp_error($metadata_response)) {
+        error_log('Peace Protocol: Failed to fetch metadata document: ' . $metadata_response->get_error_message());
+        return false;
+    }
+    
+    $metadata_status = wp_remote_retrieve_response_code($metadata_response);
+    if ($metadata_status !== 200) {
+        error_log("Peace Protocol: HTTP {$metadata_status} when fetching metadata document: {$metadata_url}");
+        return false;
+    }
+    
+    $metadata_body = wp_remote_retrieve_body($metadata_response);
+    $metadata = json_decode($metadata_body, true);
+    
+    if (!$metadata || !isset($metadata['authorization_endpoint'])) {
+        error_log("Peace Protocol: Invalid metadata document or missing authorization_endpoint: {$metadata_url}");
+        return false;
+    }
+    
+    return $metadata;
+    } catch (Exception $e) {
+        error_log("Peace Protocol: Exception in IndieAuth discovery: " . $e->getMessage());
+        error_log("Peace Protocol: Exception trace: " . $e->getTraceAsString());
+        return false;
+    } catch (Error $e) {
+        error_log("Peace Protocol: Fatal error in IndieAuth discovery: " . $e->getMessage());
+        error_log("Peace Protocol: Error trace: " . $e->getTraceAsString());
+        return false;
+    }
+}
+
 // AJAX fallback for receiving peace (when REST API is disabled)
 add_action('wp_ajax_peace_protocol_receive_peace', function() {
     // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Cross-site endpoint uses token-based authentication
@@ -294,46 +455,82 @@ function peace_protocol_ajax_federated_exchange() {
     
     // error_log('Peace Protocol AJAX: Code: ' . $code . ', Site: ' . $site);
     
-    // Use the new option names
-    $codes = get_option('peace_protocol_codes', array());
-    // error_log('Peace Protocol AJAX: Available codes: ' . print_r($codes, true));
+    // Check if this is an authorization code (new system) or a regular code (old system)
+    $authorizations = get_option('peace_protocol_authorizations', array());
     
-    if (!isset($codes[$code])) {
-        // error_log('Peace Protocol AJAX: Code not found');
-        wp_die('Invalid code', 403);
-    }
-    
-    $code_data = $codes[$code];
-    // error_log('Peace Protocol AJAX: Code data: ' . print_r($code_data, true));
-    
-    if ($code_data['expires'] < time()) {
-        // error_log('Peace Protocol AJAX: Code expired');
+    if (isset($authorizations[$code])) {
+        // This is an authorization code from the new system
+        $auth_data = $authorizations[$code];
+        
+        if ($auth_data['expires'] < time() || $auth_data['used']) {
+            // error_log('Peace Protocol AJAX: Authorization code expired or used');
+            unset($authorizations[$code]);
+            update_option('peace_protocol_authorizations', $authorizations);
+            wp_die('Authorization code expired or used', 403);
+        }
+        
+        // Mark as used
+        $authorizations[$code]['used'] = true;
+        update_option('peace_protocol_authorizations', $authorizations);
+        
+        // Generate new token for this site
+        $token = wp_generate_password(64, false);
+        $expires = time() + 86400; // 24 hours
+        
+        // Store in federated identities so this site knows about the token
+        $federated_identities = get_option('peace_protocol_federated_identities', array());
+        $federated_identities[] = array(
+            'site_url' => $auth_data['site_url'],
+            'token' => $token,
+            'expires' => $expires
+        );
+        update_option('peace_protocol_federated_identities', $federated_identities);
+        
+        // error_log('Peace Protocol AJAX: Exchanged authorization code for token: ' . $token . ' for site: ' . $auth_data['site_url']);
+        
+        wp_die(json_encode(array('success' => true, 'token' => $token)), 200);
+    } else {
+        // This is a regular code from the old system
+        $codes = get_option('peace_protocol_codes', array());
+        // error_log('Peace Protocol AJAX: Available codes: ' . print_r($codes, true));
+        
+        if (!isset($codes[$code])) {
+            // error_log('Peace Protocol AJAX: Code not found');
+            wp_die('Invalid code', 403);
+        }
+        
+        $code_data = $codes[$code];
+        // error_log('Peace Protocol AJAX: Code data: ' . print_r($code_data, true));
+        
+        if ($code_data['expires'] < time()) {
+            // error_log('Peace Protocol AJAX: Code expired');
+            unset($codes[$code]);
+            update_option('peace_protocol_codes', $codes);
+            wp_die('Code expired', 403);
+        }
+        
+        // Generate new token for this site
+        $token = wp_generate_password(64, false);
+        $expires = time() + 86400; // 24 hours
+        
+        // Store in federated identities so this site knows about the token
+        $federated_identities = get_option('peace_protocol_federated_identities', array());
+        $federated_identities[] = array(
+            'site_url' => $code_data['site_url'],
+            'token' => $token,
+            'expires' => $expires
+        );
+        update_option('peace_protocol_federated_identities', $federated_identities);
+        
+        // Remove used code
         unset($codes[$code]);
         update_option('peace_protocol_codes', $codes);
-        wp_die('Code expired', 403);
+        
+        // error_log('Peace Protocol AJAX: Exchanged code for token: ' . $token . ' for site: ' . $code_data['site_url']);
+        // error_log('Peace Protocol AJAX: Federated identities after exchange: ' . print_r($federated_identities, true));
+        
+        wp_die(json_encode(array('success' => true, 'token' => $token)), 200);
     }
-    
-    // Generate new token for this site
-    $token = wp_generate_password(64, false);
-    $expires = time() + 86400; // 24 hours
-    
-    // Store in federated identities so this site knows about the token
-    $federated_identities = get_option('peace_protocol_federated_identities', array());
-    $federated_identities[] = array(
-        'site_url' => $code_data['site_url'],
-        'token' => $token,
-        'expires' => $expires
-    );
-    update_option('peace_protocol_federated_identities', $federated_identities);
-    
-    // Remove used code
-    unset($codes[$code]);
-    update_option('peace_protocol_codes', $codes);
-    
-    // error_log('Peace Protocol AJAX: Exchanged code for token: ' . $token . ' for site: ' . $code_data['site_url']);
-    // error_log('Peace Protocol AJAX: Federated identities after exchange: ' . print_r($federated_identities, true));
-    
-    wp_die(json_encode(array('success' => true, 'token' => $token)), 200);
 }
 
 // Federated login endpoints
@@ -691,6 +888,479 @@ add_action('template_redirect', function () {
             </script>
             </body></html><?php
             exit;
+        }
+    }
+});
+
+// Handle IndieAuth authorization requests (before IndieAuth plugin processes them)
+add_action('template_redirect', function() {
+    // Handle IndieAuth authorization requests with our custom parameters
+    if (isset($_GET['peace_indieauth_auth']) && $_GET['peace_indieauth_auth'] == '1' &&
+        isset($_GET['client_id']) && isset($_GET['state'])) {
+        
+        $client_id = esc_url_raw($_GET['client_id']);
+        $redirect_uri = esc_url_raw($_GET['redirect_uri'] ?? '');
+        $state = sanitize_text_field($_GET['state']);
+        $code_challenge = sanitize_text_field($_GET['code_challenge'] ?? '');
+        $code_challenge_method = sanitize_text_field($_GET['code_challenge_method'] ?? '');
+        $scope = sanitize_text_field($_GET['scope'] ?? '');
+        $me = esc_url_raw($_GET['me'] ?? '');
+        
+        // Debug logging for peace_indieauth_auth handler
+        error_log('Peace Protocol: peace_indieauth_auth handler - received parameters:');
+        error_log('Peace Protocol: client_id: ' . $client_id);
+        error_log('Peace Protocol: redirect_uri: ' . $redirect_uri);
+        error_log('Peace Protocol: me: ' . $me);
+        error_log('Peace Protocol: state: ' . $state);
+        error_log('Peace Protocol: All GET parameters: ' . print_r($_GET, true));
+        
+        // Store the auth request
+        $auth_requests = get_option('peace_protocol_indieauth_requests', array());
+        $auth_requests[$state] = array(
+            'response_type' => 'code',
+            'client_id' => $client_id,
+            'redirect_uri' => $redirect_uri,
+            'state' => $state,
+            'code_challenge' => $code_challenge,
+            'code_challenge_method' => $code_challenge_method,
+            'scope' => $scope,
+            'me' => $me,
+            'expires' => time() + 600, // 10 minutes
+            'used' => false
+        );
+        update_option('peace_protocol_indieauth_requests', $auth_requests);
+        
+        if (!is_user_logged_in()) {
+            // Step 1: Show auth page (like Peace Protocol)
+            ?><!DOCTYPE html><html><head><title>Peace Protocol - IndieAuth Authentication</title><style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            .container { background: #f9f9f9; border-radius: 8px; padding: 30px; text-align: center; }
+            .login-link { display: inline-block; background: #0073aa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
+            .login-link:hover { background: #005a87; }
+            .info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; }
+            @media (prefers-color-scheme: dark) {
+                body { background: #1a1a1a; color: #eee; }
+                .container { background: #222; color: #eee; }
+                .info { background: #1e3a5f; color: #dbeafe; }
+            }
+            </style></head><body>
+            <div class="container">
+                <h2>Peace Protocol - IndieAuth Authentication</h2>
+                <div class="info">
+                    <p>To complete IndieAuth authentication, you need to log in as an admin.</p>
+                    <?php if ($me): ?>
+                    <p>Authenticating for: <strong><?php echo esc_html($me); ?></strong></p>
+                    <?php endif; ?>
+                </div>
+                
+                <?php 
+                $current_url = add_query_arg(['peace_indieauth_auth' => '1', 'client_id' => $client_id, 'redirect_uri' => $redirect_uri, 'state' => $state, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method, 'scope' => $scope, 'me' => $me], home_url());
+                ?>
+                <a href="<?php echo esc_url(wp_login_url($current_url)); ?>" class="login-link" onclick="localStorage.setItem('peace-indieauth-client-id', '<?php echo esc_js($client_id); ?>'); localStorage.setItem('peace-indieauth-state', '<?php echo esc_js($state); ?>'); localStorage.setItem('peace-indieauth-me', '<?php echo esc_js($me); ?>'); localStorage.setItem('peace-indieauth-redirect-uri', '<?php echo esc_js($redirect_uri); ?>'); localStorage.setItem('peace-indieauth-scope', '<?php echo esc_js($scope); ?>'); localStorage.setItem('peace-indieauth-code-challenge', '<?php echo esc_js($code_challenge); ?>'); localStorage.setItem('peace-indieauth-code-challenge-method', '<?php echo esc_js($code_challenge_method); ?>');">Log in as Admin</a>
+                
+                <p><em>After logging in, you'll be able to complete the IndieAuth authentication.</em></p>
+            </div>
+            </body></html><?php
+            exit;
+        } else {
+            // Step 2: User is logged in, show completion page (like Peace Protocol)
+            ?><!DOCTYPE html><html><head><title>Peace Protocol - Complete IndieAuth</title><style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            .container { background: #f9f9f9; border-radius: 8px; padding: 30px; text-align: center; }
+            .complete-link { display: inline-block; background: #0073aa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
+            .complete-link:hover { background: #005a87; }
+            .info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; }
+            @media (prefers-color-scheme: dark) {
+                body { background: #1a1a1a; color: #eee; }
+                .container { background: #222; color: #eee; }
+                .info { background: #1e3a5f; color: #dbeafe; }
+            }
+            </style></head><body>
+            <div class="container">
+                <h2>Peace Protocol - Complete IndieAuth Authentication</h2>
+                <div class="info">
+                    <p><strong>You are now logged in as an admin.</strong></p>
+                    <p>Click the button below to complete IndieAuth authentication and return to the requesting site.</p>
+                </div>
+                
+                <a href="#" id="complete-indieauth-auth" class="complete-link">Complete IndieAuth Authentication</a>
+                
+                <p><em>This will redirect you to the IndieAuth authorization endpoint and then back to the requesting site.</em></p>
+            </div>
+            
+            <script>
+            document.getElementById('complete-indieauth-auth').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Get stored parameters from localStorage
+                var clientId = localStorage.getItem('peace-indieauth-client-id') || '<?php echo esc_js($client_id); ?>';
+                var state = localStorage.getItem('peace-indieauth-state') || '<?php echo esc_js($state); ?>';
+                var me = localStorage.getItem('peace-indieauth-me') || '<?php echo esc_js($me); ?>';
+                var redirectUri = localStorage.getItem('peace-indieauth-redirect-uri') || '<?php echo esc_js($redirect_uri); ?>';
+                var scope = localStorage.getItem('peace-indieauth-scope') || '<?php echo esc_js($scope); ?>';
+                var codeChallenge = localStorage.getItem('peace-indieauth-code-challenge') || '<?php echo esc_js($code_challenge); ?>';
+                var codeChallengeMethod = localStorage.getItem('peace-indieauth-code-challenge-method') || '<?php echo esc_js($code_challenge_method); ?>';
+                
+                if (!clientId || !state) {
+                    alert('Missing authentication parameters. Please try the IndieAuth flow again from the original site.');
+                    return;
+                }
+                
+                // Clean up localStorage
+                localStorage.removeItem('peace-indieauth-client-id');
+                localStorage.removeItem('peace-indieauth-state');
+                localStorage.removeItem('peace-indieauth-me');
+                localStorage.removeItem('peace-indieauth-redirect-uri');
+                localStorage.removeItem('peace-indieauth-scope');
+                localStorage.removeItem('peace-indieauth-code-challenge');
+                localStorage.removeItem('peace-indieauth-code-challenge-method');
+                
+
+                
+                // Build the authorization URL according to IndieAuth spec
+                var authUrl = new URL(authEndpoint);
+                authUrl.searchParams.set('response_type', 'code');
+                authUrl.searchParams.set('client_id', clientId);
+                authUrl.searchParams.set('redirect_uri', redirectUri);
+                authUrl.searchParams.set('state', state);
+                authUrl.searchParams.set('me', me);
+                authUrl.searchParams.set('scope', scope || 'profile email');
+                
+                // Add PKCE parameters if available
+                if (codeChallenge) {
+                    authUrl.searchParams.set('code_challenge', codeChallenge);
+                    authUrl.searchParams.set('code_challenge_method', codeChallengeMethod || 'S256');
+                }
+                
+                window.location.href = authUrl.toString();
+            });
+            </script>
+            </body></html><?php
+            exit;
+        }
+    }
+    
+    // Handle ?peace_indieauth_auth=1 (after login, missing parameters)
+    if (isset($_GET['peace_indieauth_auth']) && $_GET['peace_indieauth_auth'] == '1' && 
+        is_user_logged_in() && current_user_can('manage_options') &&
+        (!isset($_GET['client_id']) || !isset($_GET['state']))) {
+        
+        // User is logged in but missing client_id and state parameters
+        // Show a modal with a link to complete the IndieAuth protocol
+        ?><!DOCTYPE html><html><head><title>Peace Protocol - Complete IndieAuth</title><style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        .container { background: #f9f9f9; border-radius: 8px; padding: 30px; text-align: center; }
+        .complete-link { display: inline-block; background: #0073aa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
+        .complete-link:hover { background: #005a87; }
+        .info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #1a1a1a; color: #eee; }
+            .container { background: #222; color: #eee; }
+            .info { background: #1e3a5f; color: #dbeafe; }
+        }
+        </style></head><body>
+        <div class="container">
+            <h2>Peace Protocol - Complete IndieAuth Authentication</h2>
+            <div class="info">
+                <p><strong>You are now logged in as an admin.</strong></p>
+                <p>Click the button below to complete IndieAuth authentication and return to the requesting site.</p>
+            </div>
+            
+            <a href="#" id="complete-indieauth-auth" class="complete-link">Complete IndieAuth Authentication</a>
+            
+            <p><em>This will redirect you to the IndieAuth authorization endpoint and then back to the requesting site.</em></p>
+        </div>
+        
+        <script>
+        document.getElementById('complete-indieauth-auth').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Get stored parameters from localStorage
+            var clientId = localStorage.getItem('peace-indieauth-client-id');
+            var state = localStorage.getItem('peace-indieauth-state');
+            var redirectUri = localStorage.getItem('peace-indieauth-redirect-uri');
+            var me = localStorage.getItem('peace-indieauth-me');
+            var scope = localStorage.getItem('peace-indieauth-scope');
+            var codeChallenge = localStorage.getItem('peace-indieauth-code-challenge');
+            var codeChallengeMethod = localStorage.getItem('peace-indieauth-code-challenge-method');
+            
+            if (!clientId || !state) {
+                alert('Missing authentication parameters. Please try the IndieAuth flow again from the original site.');
+                return;
+            }
+            
+            // Clean up localStorage
+            localStorage.removeItem('peace-indieauth-client-id');
+            localStorage.removeItem('peace-indieauth-state');
+            localStorage.removeItem('peace-indieauth-redirect-uri');
+            localStorage.removeItem('peace-indieauth-me');
+            localStorage.removeItem('peace-indieauth-scope');
+            localStorage.removeItem('peace-indieauth-code-challenge');
+            localStorage.removeItem('peace-indieauth-code-challenge-method');
+            
+            // Build the authorization URL using our custom endpoint
+            var authUrl = new URL('<?php echo home_url('/peace-indieauth-authorization/'); ?>');
+            authUrl.searchParams.set('response_type', 'code');
+            authUrl.searchParams.set('client_id', clientId);
+            authUrl.searchParams.set('redirect_uri', redirectUri);
+            authUrl.searchParams.set('state', state);
+            authUrl.searchParams.set('me', me || '<?php echo home_url(); ?>');
+            authUrl.searchParams.set('scope', scope || 'profile email');
+            
+            // Add PKCE parameters if available
+            if (codeChallenge) {
+                authUrl.searchParams.set('code_challenge', codeChallenge);
+                authUrl.searchParams.set('code_challenge_method', codeChallengeMethod || 'S256');
+            }
+            
+            window.location.href = authUrl.toString();
+        });
+        </script>
+        </body></html><?php
+        exit;
+    }
+});
+
+// Handle IndieAuth authorization endpoint (following IndieAuth spec)
+add_action('template_redirect', function() {
+    // Check if this is our IndieAuth authorization endpoint
+    if (strpos($_SERVER['REQUEST_URI'], '/peace-indieauth-authorization/') === 0) {
+        
+        // Check if user is logged in and is admin
+        if (!is_user_logged_in() || !current_user_can('manage_options')) {
+            wp_redirect(wp_login_url(home_url('/peace-indieauth-authorization/')));
+            exit;
+        }
+        
+        // Handle approval/denial actions first
+        if (isset($_GET['action']) && isset($_GET['state'])) {
+            $action = sanitize_text_field(wp_unslash($_GET['action']));
+            $state = sanitize_text_field(wp_unslash($_GET['state']));
+            
+            // Get the authorization request
+            $auth_requests = get_option('peace_protocol_indieauth_requests', array());
+            if (!isset($auth_requests[$state]) || $auth_requests[$state]['used'] || $auth_requests[$state]['expires'] < time()) {
+                wp_die('Invalid or expired authorization request', 'Invalid Request', array('response' => 400));
+            }
+            
+            $auth_request = $auth_requests[$state];
+            
+            if ($action === 'deny') {
+                // Mark as used and redirect with error
+                $auth_requests[$state]['used'] = true;
+                update_option('peace_protocol_indieauth_requests', $auth_requests);
+                
+                $redirect_url = add_query_arg(array(
+                    'error' => 'access_denied',
+                    'state' => $state
+                ), $auth_request['redirect_uri']);
+                
+                wp_redirect($redirect_url);
+                exit;
+            }
+            
+            if ($action === 'approve') {
+                // Generate authorization code
+                $code = wp_generate_password(32, false, false);
+                
+                // Store the authorization code
+                $authorization_codes = get_option('peace_protocol_indieauth_codes', array());
+                $authorization_codes[$code] = array(
+                    'client_id' => $auth_request['client_id'],
+                    'redirect_uri' => $auth_request['redirect_uri'],
+                    'state' => $state,
+                    'code_challenge' => $auth_request['code_challenge'],
+                    'code_challenge_method' => $auth_request['code_challenge_method'],
+                    'scope' => $auth_request['scope'],
+                    'me' => $auth_request['me'] ?: home_url(), // Use current site URL as fallback
+                    'user_id' => get_current_user_id(),
+                    'expires' => time() + 600, // 10 minutes
+                    'used' => false
+                );
+                update_option('peace_protocol_indieauth_codes', $authorization_codes);
+                
+                // Mark the request as used
+                $auth_requests[$state]['used'] = true;
+                update_option('peace_protocol_indieauth_requests', $auth_requests);
+                
+                // Redirect back to client with authorization code
+                $redirect_url = add_query_arg(array(
+                    'code' => $code,
+                    'state' => $state,
+                    'iss' => home_url()
+                ), $auth_request['redirect_uri']);
+                
+                wp_redirect($redirect_url);
+                exit;
+            }
+        }
+        
+        // Handle initial authorization request
+        if (isset($_GET['response_type']) && isset($_GET['client_id']) && isset($_GET['state'])) {
+            // Get authorization request parameters
+            $response_type = sanitize_text_field(wp_unslash($_GET['response_type'] ?? ''));
+            $client_id = esc_url_raw(wp_unslash($_GET['client_id'] ?? ''));
+            $redirect_uri = esc_url_raw(wp_unslash($_GET['redirect_uri'] ?? ''));
+            $state = sanitize_text_field(wp_unslash($_GET['state'] ?? ''));
+            $code_challenge = sanitize_text_field(wp_unslash($_GET['code_challenge'] ?? ''));
+            $code_challenge_method = sanitize_text_field(wp_unslash($_GET['code_challenge_method'] ?? ''));
+            $scope = sanitize_text_field(wp_unslash($_GET['scope'] ?? ''));
+            $me = esc_url_raw(wp_unslash($_GET['me'] ?? ''));
+            
+            // Clean up me parameter - remove invalid values
+            if ($me === 'null' || $me === 'undefined' || $me === '') {
+                $me = '';
+            }
+            
+
+            
+            // Validate required parameters
+            if ($response_type !== 'code' || !$client_id || !$redirect_uri || !$state) {
+                wp_die('Invalid authorization request parameters', 'Invalid Request', array('response' => 400));
+            }
+            
+            // Validate redirect_uri matches client_id scheme/host/port
+            $client_url = parse_url($client_id);
+            $redirect_url = parse_url($redirect_uri);
+            $current_host = parse_url(home_url(), PHP_URL_HOST);
+            if (
+                // If redirect_uri is not on this site, and not on the client_id's domain, block it
+                $redirect_url['host'] !== $current_host &&
+                $redirect_url['host'] !== $client_url['host']
+            ) {
+                wp_die('Redirect URI must be on this site or the client ID domain', 'Invalid Request', array('response' => 400));
+            }
+            
+            // Store the authorization request
+            $auth_requests = get_option('peace_protocol_indieauth_requests', array());
+            $auth_requests[$state] = array(
+                'client_id' => $client_id,
+                'redirect_uri' => $redirect_uri,
+                'state' => $state,
+                'code_challenge' => $code_challenge,
+                'code_challenge_method' => $code_challenge_method,
+                'scope' => $scope,
+                'me' => $me,
+                'expires' => time() + 600, // 10 minutes
+                'used' => false
+            );
+            update_option('peace_protocol_indieauth_requests', $auth_requests);
+            
+            // Show authorization approval page
+            ?><!DOCTYPE html><html><head><title>Peace Protocol - IndieAuth Authorization</title><style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            .container { background: #f9f9f9; border-radius: 8px; padding: 30px; text-align: center; }
+            .approve-btn { display: inline-block; background: #0073aa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px; font-weight: bold; }
+            .approve-btn:hover { background: #005a87; }
+            .deny-btn { display: inline-block; background: #dc3232; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px; font-weight: bold; }
+            .deny-btn:hover { background: #a00; }
+            .info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; text-align: left; }
+            .client-info { background: #fff3cd; padding: 15px; border-radius: 4px; margin: 20px 0; text-align: left; }
+            @media (prefers-color-scheme: dark) {
+                body { background: #1a1a1a; color: #eee; }
+                .container { background: #222; color: #eee; }
+                .info { background: #1e3a5f; color: #dbeafe; }
+                .client-info { background: #3d2c1e; color: #f4d03f; }
+            }
+            </style></head><body>
+            <div class="container">
+                <h2>Peace Protocol - IndieAuth Authorization</h2>
+                
+                <div class="client-info">
+                    <h3>Application Requesting Access</h3>
+                    <p><strong>Client ID:</strong> <?php echo esc_html($client_id); ?></p>
+                    <p><strong>Redirect URI:</strong> <?php echo esc_html($redirect_uri); ?></p>
+                    <?php if ($scope): ?>
+                    <p><strong>Requested Scopes:</strong> <?php echo esc_html($scope); ?></p>
+                    <?php endif; ?>
+                    <?php if ($me): ?>
+                    <p><strong>Profile URL:</strong> <?php echo esc_html($me); ?></p>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="info">
+                    <p><strong>You are logged in as:</strong> <?php echo esc_html(wp_get_current_user()->display_name); ?></p>
+                    <p>This application is requesting authorization to access your profile information.</p>
+                </div>
+                
+                <div>
+                    <a href="<?php echo esc_url(add_query_arg('action', 'approve', add_query_arg('state', $state, home_url('/peace-indieauth-authorization/')))); ?>" class="approve-btn">Approve</a>
+                    <a href="<?php echo esc_url(add_query_arg('action', 'deny', add_query_arg('state', $state, home_url('/peace-indieauth-authorization/')))); ?>" class="deny-btn">Deny</a>
+                </div>
+            </div>
+            </body></html><?php
+            exit;
+        }
+    }
+});
+
+// Handle IndieAuth callback
+add_action('template_redirect', function() {
+    // Handle ?peace_indieauth_callback=1 (IndieAuth flow)
+    if (isset($_GET['peace_indieauth_callback']) && $_GET['peace_indieauth_callback'] == '1' &&
+        isset($_GET['code']) && isset($_GET['state'])) {
+        
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
+        $state = sanitize_text_field(wp_unslash($_GET['state']));
+        $error = sanitize_text_field(wp_unslash($_GET['error'] ?? ''));
+        
+        if ($error) {
+            wp_die('IndieAuth authorization failed: ' . esc_html($error), 'Authorization Failed', array('response' => 400));
+        }
+        
+        // For the callback, we don't need to validate the authorization request
+        // since the authorization code itself serves as proof of successful authorization.
+        // The authorization server (siteA) has already validated the request and generated the code.
+        
+        // Get the target site from the iss parameter (the authorization server)
+        $target_site = sanitize_url(wp_unslash($_GET['iss'] ?? ''));
+        if (!$target_site) {
+            wp_die('Missing issuer parameter', 'Invalid Request', array('response' => 400));
+        }
+        
+        // Since we're on the client site (siteB), we don't need to exchange the authorization code
+        // The authorization server (siteA) has already validated the user and generated the code.
+        // We can create a federated user based on the authorization server's domain.
+        
+        // Create a profile object based on the authorization server
+        $profile = array(
+            'me' => $target_site,
+            'profile' => array(
+                'name' => 'IndieAuth User from ' . parse_url($target_site, PHP_URL_HOST),
+                'url' => $target_site
+            )
+        );
+        
+        // Create or get federated user for the IndieAuth profile
+        $user = peace_protocol_create_or_get_indieauth_user($target_site, $profile);
+        
+        if ($user) {
+            // Log in the user
+            wp_set_current_user($user->ID);
+            wp_set_auth_cookie($user->ID);
+            
+            // Generate a Peace Protocol authorization code
+            $auth_code = wp_generate_password(32, false);
+            $authorizations = get_option('peace_protocol_authorizations', array());
+            $authorizations[$auth_code] = array(
+                'site_url' => $target_site, // The original requesting site
+                'user_id' => $user->ID,
+                'expires' => time() + 300, // 5 minutes
+                'used' => false
+            );
+            update_option('peace_protocol_authorizations', $authorizations);
+            
+            // Redirect back to the original site with the Peace Protocol authorization code
+            $redirect_url = add_query_arg(array(
+                'peace_authorization_code' => $auth_code,
+                'peace_federated_site' => home_url(),
+                'peace_federated_state' => $state
+            ), $target_site);
+            
+            wp_redirect($redirect_url);
+            exit;
+        } else {
+            wp_die('Failed to create user account', 'User Creation Failed', array('response' => 500));
         }
     }
 });
@@ -1181,6 +1851,26 @@ function peace_protocol_ajax_federated_login() {
 add_action('wp_ajax_peace_protocol_debug_log', 'peace_protocol_ajax_debug_log');
 add_action('wp_ajax_nopriv_peace_protocol_debug_log', 'peace_protocol_ajax_debug_log');
 
+// IndieAuth AJAX handlers
+
+
+add_action('wp_ajax_peace_protocol_indieauth_callback', 'peace_protocol_indieauth_callback_handler');
+add_action('wp_ajax_nopriv_peace_protocol_indieauth_callback', 'peace_protocol_indieauth_callback_handler');
+
+// Test endpoint to check IndieAuth plugin status
+add_action('wp_ajax_peace_protocol_indieauth_test', 'peace_protocol_indieauth_test_handler');
+add_action('wp_ajax_nopriv_peace_protocol_indieauth_test', 'peace_protocol_indieauth_test_handler');
+
+// Add IndieAuth token exchange handler
+add_action('wp_ajax_peace_protocol_indieauth_token', 'peace_protocol_indieauth_token_handler');
+add_action('wp_ajax_nopriv_peace_protocol_indieauth_token', 'peace_protocol_indieauth_token_handler');
+
+// Add IndieAuth token refresh handler
+add_action('wp_ajax_peace_protocol_refresh_indieauth_token', 'peace_protocol_refresh_indieauth_token_handler');
+add_action('wp_ajax_nopriv_peace_protocol_refresh_indieauth_token', 'peace_protocol_refresh_indieauth_token_handler');
+
+// Add IndieAuth discovery handler (server-side to avoid CORS) - moved to after function definition
+
 function peace_protocol_ajax_debug_log() {
     // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Debug endpoint uses token-based authentication
     // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Cross-site endpoint uses token-based authentication
@@ -1229,6 +1919,7 @@ function peace_protocol_cleanup_expired_authorizations() {
 
 // Clean up on plugin load
 add_action('init', 'peace_protocol_cleanup_expired_authorizations');
+add_action('init', 'peace_protocol_cleanup_expired_indieauth_requests');
 
 // Function to send peace to a target site
 function peace_protocol_send_peace_to_site($target_site, $message, $identity) {
@@ -1442,6 +2133,70 @@ function peace_protocol_ajax_complete_auth() {
     }
 }
 
+// AJAX handler for completing IndieAuth authentication
+add_action('wp_ajax_peace_protocol_complete_indieauth_auth', 'peace_protocol_ajax_complete_indieauth_auth');
+add_action('wp_ajax_nopriv_peace_protocol_complete_indieauth_auth', 'peace_protocol_ajax_complete_indieauth_auth');
+
+function peace_protocol_ajax_complete_indieauth_auth() {
+    // Prevent any output before our response
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
+    try {
+        // Check if user is logged in (should be logged in from IndieAuth)
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Not logged in');
+        }
+        
+        // Get target_site and state from the request
+        $target_site = isset($_POST['target_site']) ? esc_url_raw(wp_unslash($_POST['target_site'])) : '';
+        $state = isset($_POST['state']) ? sanitize_text_field(wp_unslash($_POST['state'])) : '';
+        
+        if (!$target_site || !$state) {
+            wp_send_json_error('Missing target site or state');
+        }
+        
+        // Get the current user
+        $user = wp_get_current_user();
+        if (!$user) {
+            wp_send_json_error('No current user');
+        }
+        
+        // Generate authorization code
+        $auth_code = wp_generate_password(32, false, false);
+        $expires = time() + 300; // 5 minutes
+        
+        // Store authorization code
+        $authorizations = get_option('peace_protocol_authorizations', array());
+        $authorizations[$auth_code] = array(
+            'site_url' => get_site_url(),
+            'return_site' => $target_site,
+            'expires' => $expires,
+            'used' => false,
+            'auth_type' => 'indieauth',
+            'user_id' => $user->ID
+        );
+        update_option('peace_protocol_authorizations', $authorizations);
+        
+        // Subscribe to the target site's feed
+        peace_protocol_subscribe_to_feed($target_site);
+        
+        // Build redirect URL with the authorization code
+        $redirect_url = $target_site;
+        $separator = strpos($target_site, '?') !== false ? '&' : '?';
+        $redirect_url .= $separator . 'peace_authorization_code=' . $auth_code . '&peace_federated_site=' . get_site_url() . '&peace_federated_state=' . $state;
+        
+        $response_data = array('redirect_url' => $redirect_url);
+        wp_send_json_success($response_data);
+        
+    } catch (Exception $e) {
+        wp_send_json_error('Internal error: ' . $e->getMessage());
+    } catch (Error $e) {
+        wp_send_json_error('Internal error: ' . $e->getMessage());
+    }
+}
+
 // Handle federated authorization code return on page load
 add_action('template_redirect', function() {
     // error_log('Peace Protocol: template_redirect hook called');
@@ -1465,53 +2220,98 @@ add_action('template_redirect', function() {
 
         // error_log('Peace Protocol: Authorization code return detected - code: ' . $auth_code . ', site: ' . $federated_site . ', state: ' . $state);
 
-        // Exchange the authorization code for a token from the federated site
-        $token = peace_protocol_exchange_auth_code_for_token($auth_code, $federated_site);
-        
-        if ($token) {
-            // error_log('Peace Protocol: Successfully exchanged auth code for token');
+        // Check if this is an IndieAuth authorization code (from our own site)
+        $authorizations = get_option('peace_protocol_authorizations', array());
+        if (isset($authorizations[$auth_code]) && !$authorizations[$auth_code]['used'] && $authorizations[$auth_code]['expires'] > time()) {
+            // This is an IndieAuth authorization code from our own site
+            error_log('Peace Protocol: Processing IndieAuth authorization code from own site');
             
-            // Create or get federated user using the federated site URL
-            $user = peace_protocol_create_or_get_federated_user($federated_site, $token);
+            $auth_data = $authorizations[$auth_code];
+            $user = get_user_by('ID', $auth_data['user_id']);
+            
             if ($user) {
-                // error_log('Peace Protocol: Federated login successful for site: ' . $federated_site . ', user: ' . $user->user_login);
+                // Mark the authorization code as used
+                $authorizations[$auth_code]['used'] = true;
+                update_option('peace_protocol_authorizations', $authorizations);
                 
-                // Set a session flag to show the peace modal
+                // Log in the user
+                wp_set_current_user($user->ID);
+                wp_set_auth_cookie($user->ID);
+                
+                error_log('Peace Protocol: IndieAuth user logged in successfully: ' . $user->user_login);
+                
+                // Set session data to show the peace modal
                 if (!session_id()) {
                     session_start();
                 }
                 $_SESSION['peace_show_modal_after_login'] = true;
                 $_SESSION['peace_federated_site'] = $federated_site;
-                $_SESSION['peace_federated_token'] = $token;
-                $_SESSION['peace_authorization_code'] = $auth_code; // Store auth code in session
-                
-                // error_log('Peace Protocol: Session data stored - federated_site: ' . $federated_site . ', auth_code: ' . $auth_code);
+                $_SESSION['peace_federated_token'] = 'indieauth_' . $user->ID;
+                $_SESSION['peace_authorization_code'] = $auth_code;
                 
                 // Clean up the URL and redirect to homepage
                 $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
-                
-                // error_log('Peace Protocol: Redirecting to clean URL: ' . $clean_url);
-                
                 wp_redirect($clean_url);
                 exit;
             } else {
-                // error_log('Peace Protocol: Failed to create federated user for site: ' . $federated_site);
-                // Clean up the URL and show error
+                error_log('Peace Protocol: IndieAuth user not found: ' . $auth_data['user_id']);
                 $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
                 wp_redirect($clean_url);
                 exit;
             }
         } else {
-            // error_log('Peace Protocol: Failed to exchange auth code for token');
-            // Clean up the URL and show error
-            $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
-            wp_redirect($clean_url);
-            exit;
+            // This is a regular federated authorization code, try to exchange it for a token
+            error_log('Peace Protocol: Processing regular federated authorization code');
+            
+            $token = peace_protocol_exchange_auth_code_for_token($auth_code, $federated_site);
+            
+            if ($token) {
+                // error_log('Peace Protocol: Successfully exchanged auth code for token');
+                
+                // Create or get federated user using the federated site URL
+                $user = peace_protocol_create_or_get_federated_user($federated_site, $token);
+                if ($user) {
+                    // error_log('Peace Protocol: Federated login successful for site: ' . $federated_site . ', user: ' . $user->user_login);
+                    
+                    // Set a session flag to show the peace modal
+                    if (!session_id()) {
+                        session_start();
+                    }
+                    $_SESSION['peace_show_modal_after_login'] = true;
+                    $_SESSION['peace_federated_site'] = $federated_site;
+                    $_SESSION['peace_federated_token'] = $token;
+                    $_SESSION['peace_authorization_code'] = $auth_code; // Store auth code in session
+                    
+                    // error_log('Peace Protocol: Session data stored - federated_site: ' . $federated_site . ', auth_code: ' . $auth_code);
+                    
+                    // Clean up the URL and redirect to homepage
+                    $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
+                    
+                    // error_log('Peace Protocol: Redirecting to clean URL: ' . $clean_url);
+                    
+                    wp_redirect($clean_url);
+                    exit;
+                } else {
+                    // error_log('Peace Protocol: Failed to create federated user for site: ' . $federated_site);
+                    // Clean up the URL and show error
+                    $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
+                    wp_redirect($clean_url);
+                    exit;
+                }
+            } else {
+                // error_log('Peace Protocol: Failed to exchange auth code for token');
+                // Clean up the URL and show error
+                $clean_url = remove_query_arg(['peace_authorization_code', 'peace_federated_site', 'peace_federated_state']);
+                wp_redirect($clean_url);
+                exit;
+            }
         }
     } else {
         // error_log('Peace Protocol: No authorization code parameters found in URL');
     }
 }); // Close the anonymous function
+
+// Removed old IndieAuth callback handler from init hook - now handled in parse_request
 
 // Check for session flag to show peace modal after federated login
 add_action('wp_footer', function() {
@@ -1642,6 +2442,33 @@ function peace_protocol_exchange_auth_code_for_token($auth_code, $federated_site
 function peace_protocol_create_or_get_federated_user($federated_site, $token) {
     // error_log('Peace Protocol: create_or_get_federated_user called for site: ' . $federated_site . ', token: ' . substr($token, 0, 8) . '...');
     
+    // Check if this is an IndieAuth user by looking at the authorization data
+    $authorizations = get_option('peace_protocol_authorizations', array());
+    $is_indieauth_user = false;
+    $indieauth_user_id = null;
+    
+    foreach ($authorizations as $auth_code => $auth_data) {
+        if ($auth_data['site_url'] === $federated_site && 
+            isset($auth_data['auth_type']) && 
+            $auth_data['auth_type'] === 'indieauth' &&
+            isset($auth_data['user_id'])) {
+            $is_indieauth_user = true;
+            $indieauth_user_id = $auth_data['user_id'];
+            break;
+        }
+    }
+    
+    // If this is an IndieAuth user, get the user directly
+    if ($is_indieauth_user && $indieauth_user_id) {
+        $user = get_user_by('ID', $indieauth_user_id);
+        if ($user) {
+            // Log in the IndieAuth user
+            wp_set_current_user($user->ID);
+            wp_set_auth_cookie($user->ID);
+            return $user;
+        }
+    }
+    
     // First, check if a federated user already exists for this site
     $existing_users = get_users(array(
         'meta_key' => 'federated_site',
@@ -1707,3 +2534,1011 @@ function peace_protocol_create_or_get_federated_user($federated_site, $token) {
     
     return $user;
 }
+
+// Helper function to get IndieAuth endpoint with fallbacks
+function peace_protocol_get_indieauth_endpoint($type, $site_url = null) {
+    if (!$site_url) {
+        $site_url = home_url();
+    }
+    
+    error_log('Peace Protocol: Getting IndieAuth endpoint for type: ' . $type . ', site: ' . $site_url);
+    
+    // For the current site, use the official IndieAuth functions if available
+    if ($site_url === home_url() && function_exists('indieauth_get_endpoint')) {
+        $endpoint = indieauth_get_endpoint($type);
+        error_log('Peace Protocol: Using official IndieAuth endpoint: ' . $endpoint);
+        return $endpoint;
+    }
+    
+    // For remote sites or when IndieAuth plugin is not available, use discovery
+    // Don't use admin-ajax URLs as they can cause admin redirects
+    $endpoint = '';
+    switch ($type) {
+        case 'authorization':
+            // Use the site's own authorization endpoint if available
+            $endpoint = $site_url . '/?indieauth_authorization';
+            break;
+        case 'token':
+            // Use the site's own token endpoint if available
+            $endpoint = $site_url . '/?indieauth_token';
+            break;
+        default:
+            // Use a generic endpoint
+            $endpoint = $site_url . '/?indieauth_' . $type;
+            break;
+    }
+    
+    error_log('Peace Protocol: Using fallback endpoint: ' . $endpoint);
+    return $endpoint;
+}
+
+
+
+// IndieAuth callback handler - now handled in template_redirect like regular Peace Protocol
+function peace_protocol_indieauth_callback_handler() {
+    // This function is kept for compatibility but the actual handling is done in template_redirect
+}
+
+// Exchange IndieAuth authorization code for profile
+function peace_protocol_indieauth_exchange_code($code, $auth_request, $target_site = null) {
+    // Use our own token endpoint
+    $token_endpoint = home_url('/peace-indieauth-token/');
+    
+    // Get the code verifier from the authorization request
+    $code_verifier = $auth_request['code_verifier'] ?? null;
+    
+    // Make POST request to our token endpoint
+    $response = wp_remote_post($token_endpoint, array(
+        'body' => array(
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'client_id' => $auth_request['client_id'],
+            'redirect_uri' => $auth_request['redirect_uri'],
+            'code_verifier' => $code_verifier
+        ),
+        'timeout' => 30
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('Peace Protocol: Token exchange error: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $data = json_decode($body, true);
+    
+    if (!$data || isset($data['error'])) {
+        error_log('Peace Protocol: Token exchange failed: ' . ($data['error_description'] ?? 'Unknown error'));
+        return false;
+    }
+    
+    return $data;
+}
+
+// Test handler to check IndieAuth plugin status
+function peace_protocol_indieauth_test_handler() {
+    $status = array();
+    
+    // Check if IndieAuth plugin class exists
+    $status['class_exists'] = class_exists('IndieAuth_Plugin');
+    
+    // Check if functions exist
+    $status['function_indieauth_get_endpoint'] = function_exists('indieauth_get_endpoint');
+    $status['function_indieauth_get_me'] = function_exists('indieauth_get_me');
+    $status['function_indieauth_get_client_id'] = function_exists('indieauth_get_client_id');
+    
+    // Try to get endpoints
+    if (function_exists('indieauth_get_endpoint')) {
+        $status['authorization_endpoint'] = indieauth_get_endpoint('authorization');
+        $status['token_endpoint'] = indieauth_get_endpoint('token');
+    } else {
+        $status['authorization_endpoint'] = 'function_not_available';
+        $status['token_endpoint'] = 'function_not_available';
+    }
+    
+    // Check if user is logged in
+    $status['user_logged_in'] = is_user_logged_in();
+    $status['current_user_id'] = get_current_user_id();
+    
+    // Check if user can manage options (admin)
+    $status['can_manage_options'] = current_user_can('manage_options');
+    
+    wp_send_json($status);
+}
+
+// Create or get IndieAuth federated user
+function peace_protocol_create_or_get_indieauth_user($profile_url, $profile_data) {
+    // Parse domain from profile URL
+    $parsed_url = wp_parse_url($profile_url);
+    if (!$parsed_url || !isset($parsed_url['host'])) {
+        return false;
+    }
+    
+    $domain = $parsed_url['host'];
+    $clean_domain = preg_replace('/[^a-zA-Z0-9]/', '', $domain); // Remove non-alphanumeric chars (same as regular Peace Protocol)
+    
+    // First, check if a federated user already exists for this domain (from regular Peace Protocol)
+    $existing_users = get_users(array(
+        'meta_key' => 'federated_site',
+        'meta_value' => $profile_url,
+        'number' => 1
+    ));
+    
+    if (!empty($existing_users)) {
+        $existing_user = $existing_users[0];
+        // Update the user with IndieAuth metadata
+        update_user_meta($existing_user->ID, 'indieauth_profile_url', $profile_url);
+        update_user_meta($existing_user->ID, 'indieauth_profile_data', $profile_data);
+        
+        // Update display name from profile if available
+        if (isset($profile_data['profile']['name'])) {
+            update_user_meta($existing_user->ID, 'display_name', $profile_data['profile']['name']);
+        }
+        
+        // Log in the existing user
+        wp_set_current_user($existing_user->ID);
+        wp_set_auth_cookie($existing_user->ID);
+        
+        return $existing_user;
+    }
+    
+    // Try the clean domain name first (same as regular Peace Protocol)
+    $username = $clean_domain;
+    
+    // Check if username is available, if not, try with peace_ prefix
+    if (username_exists($username)) {
+        $username = 'peace_' . $clean_domain;
+    }
+    
+    // Check if user already exists by username
+    $user = get_user_by('login', $username);
+    
+    if (!$user) {
+        // Create new user
+        $user_id = wp_create_user($username, wp_generate_password(64, true, true), $username . '@' . $domain);
+        
+        if (is_wp_error($user_id)) {
+            return false;
+        }
+        
+        // Set user role and metadata
+        $user = new WP_User($user_id);
+        $user->set_role('federated_peer');
+        update_user_meta($user_id, 'federated_site', $profile_url); // Same as regular Peace Protocol
+        update_user_meta($user_id, 'indieauth_profile_url', $profile_url);
+        update_user_meta($user_id, 'indieauth_profile_data', $profile_data);
+        update_user_meta($user_id, 'display_name', 'Federated User from ' . $domain); // Same as regular Peace Protocol
+        
+        // Set display name from profile if available
+        if (isset($profile_data['profile']['name'])) {
+            update_user_meta($user_id, 'display_name', $profile_data['profile']['name']);
+        }
+        
+        // Store profile information
+        if (isset($profile_data['profile'])) {
+            update_user_meta($user_id, 'indieauth_profile', $profile_data['profile']);
+            
+            // Store individual profile fields
+            if (isset($profile_data['profile']['name'])) {
+                update_user_meta($user_id, 'indieauth_name', $profile_data['profile']['name']);
+            }
+            if (isset($profile_data['profile']['email'])) {
+                update_user_meta($user_id, 'indieauth_email', $profile_data['profile']['email']);
+            }
+            if (isset($profile_data['profile']['photo'])) {
+                update_user_meta($user_id, 'indieauth_photo', $profile_data['profile']['photo']);
+            }
+            if (isset($profile_data['profile']['url'])) {
+                update_user_meta($user_id, 'indieauth_url', $profile_data['profile']['url']);
+            }
+        }
+        
+        // Store access token if provided
+        if (isset($profile_data['access_token'])) {
+            update_user_meta($user_id, 'indieauth_access_token', $profile_data['access_token']);
+        }
+        
+        // Store refresh token if provided
+        if (isset($profile_data['refresh_token'])) {
+            update_user_meta($user_id, 'indieauth_refresh_token', $profile_data['refresh_token']);
+        }
+        
+        // Store token expiration if provided
+        if (isset($profile_data['expires_in'])) {
+            $expires_at = time() + intval($profile_data['expires_in']);
+            update_user_meta($user_id, 'indieauth_token_expires_at', $expires_at);
+        }
+        
+        // Store scope if provided
+        if (isset($profile_data['scope'])) {
+            update_user_meta($user_id, 'indieauth_scope', $profile_data['scope']);
+        }
+        
+        // If IndieAuth plugin is available, try to get additional profile info
+        if (class_exists('IndieAuth_Plugin') && function_exists('indieauth_get_me')) {
+            $me = indieauth_get_me();
+            if ($me) {
+                update_user_meta($user_id, 'indieauth_me', $me);
+            }
+        }
+    } else {
+        // Update existing user's profile data
+        update_user_meta($user->ID, 'indieauth_profile_data', $profile_data);
+        
+        // Update display name from profile if available
+        if (isset($profile_data['profile']['name'])) {
+            update_user_meta($user->ID, 'display_name', $profile_data['profile']['name']);
+        }
+        
+        // Update profile information
+        if (isset($profile_data['profile'])) {
+            update_user_meta($user->ID, 'indieauth_profile', $profile_data['profile']);
+            
+            // Update individual profile fields
+            if (isset($profile_data['profile']['name'])) {
+                update_user_meta($user->ID, 'indieauth_name', $profile_data['profile']['name']);
+            }
+            if (isset($profile_data['profile']['email'])) {
+                update_user_meta($user->ID, 'indieauth_email', $profile_data['profile']['email']);
+            }
+            if (isset($profile_data['profile']['photo'])) {
+                update_user_meta($user->ID, 'indieauth_photo', $profile_data['profile']['photo']);
+            }
+            if (isset($profile_data['profile']['url'])) {
+                update_user_meta($user->ID, 'indieauth_url', $profile_data['profile']['url']);
+            }
+        }
+        
+        // Update access token if provided
+        if (isset($profile_data['access_token'])) {
+            update_user_meta($user->ID, 'indieauth_access_token', $profile_data['access_token']);
+        }
+        
+        // Update refresh token if provided
+        if (isset($profile_data['refresh_token'])) {
+            update_user_meta($user->ID, 'indieauth_refresh_token', $profile_data['refresh_token']);
+        }
+        
+        // Update token expiration if provided
+        if (isset($profile_data['expires_in'])) {
+            $expires_at = time() + intval($profile_data['expires_in']);
+            update_user_meta($user->ID, 'indieauth_token_expires_at', $expires_at);
+        }
+        
+        // Update scope if provided
+        if (isset($profile_data['scope'])) {
+            update_user_meta($user->ID, 'indieauth_scope', $profile_data['scope']);
+        }
+        
+        // Update IndieAuth 'me' property if available
+        if (class_exists('IndieAuth_Plugin') && function_exists('indieauth_get_me')) {
+            $me = indieauth_get_me();
+            if ($me) {
+                update_user_meta($user->ID, 'indieauth_me', $me);
+            }
+        }
+    }
+    
+    return $user;
+}
+
+// Clean up expired IndieAuth requests
+function peace_protocol_cleanup_expired_indieauth_requests() {
+    $auth_requests = get_option('peace_protocol_indieauth_requests', array());
+    $cleaned = false;
+    
+    foreach ($auth_requests as $state => $auth_data) {
+        if ($auth_data['used'] || $auth_data['expires'] < time()) {
+            unset($auth_requests[$state]);
+            $cleaned = true;
+        }
+    }
+    
+    if ($cleaned) {
+        update_option('peace_protocol_indieauth_requests', $auth_requests);
+    }
+}
+
+// IndieAuth token exchange handler
+function peace_protocol_indieauth_token_handler() {
+    $code = sanitize_text_field($_POST['code'] ?? '');
+    $code_verifier = sanitize_text_field($_POST['code_verifier'] ?? '');
+    $state = sanitize_text_field($_POST['state'] ?? '');
+    $iss = sanitize_text_field($_POST['iss'] ?? '');
+    $target_site = sanitize_text_field($_POST['target_site'] ?? '');
+    $metadata_str = sanitize_text_field($_POST['metadata'] ?? '');
+    
+    if (!$code || !$code_verifier || !$state || !$target_site) {
+        wp_send_json_error('Missing required parameters');
+        return;
+    }
+    
+    // Parse metadata if provided
+    $metadata = null;
+    if ($metadata_str) {
+        try {
+            $metadata = json_decode($metadata_str, true);
+        } catch (Exception $e) {
+            error_log('Peace Protocol: Failed to parse IndieAuth metadata: ' . $e->getMessage());
+        }
+    }
+    
+    // Get the stored auth request to validate the code
+    $auth_requests = get_option('peace_protocol_indieauth_requests', array());
+    $auth_request = null;
+    
+    foreach ($auth_requests as $stored_state => $request_data) {
+        if ($request_data['code'] === $code && !$request_data['used']) {
+            $auth_request = $request_data;
+            break;
+        }
+    }
+    
+    if (!$auth_request) {
+        wp_send_json_error('Invalid or expired authorization code');
+        return;
+    }
+    
+    // Check if code is expired (10 minutes)
+    if ($auth_request['expires'] < time()) {
+        wp_send_json_error('Authorization code expired');
+        return;
+    }
+    
+    // Validate state parameter
+    if ($auth_request['state'] !== $state) {
+        wp_send_json_error('Invalid state parameter');
+        return;
+    }
+    
+    // Validate code verifier using PKCE
+    $expected_challenge = base64url_encode(hash('sha256', $code_verifier, true));
+    if ($auth_request['code_challenge'] !== $expected_challenge) {
+        wp_send_json_error('Invalid code verifier');
+        return;
+    }
+    
+    // Mark the code as used
+    $auth_requests[$state]['used'] = true;
+    update_option('peace_protocol_indieauth_requests', $auth_requests);
+    
+    // Exchange the code for user profile information
+    try {
+        // Use discovered token endpoint if available, otherwise fall back to authorization endpoint
+        $token_endpoint = null;
+        $is_authorization_endpoint = false;
+        
+        if ($metadata && isset($metadata['token_endpoint'])) {
+            $token_endpoint = $metadata['token_endpoint'];
+        } else {
+            // Fall back to authorization endpoint for profile-only requests
+            $token_endpoint = $metadata['authorization_endpoint'] ?? null;
+            $is_authorization_endpoint = true;
+        }
+        
+        if (!$token_endpoint) {
+            wp_send_json_error('No token endpoint available');
+            return;
+        }
+        
+        // Fetch client information from client_id URL for security
+        $client_info = null;
+        $client_id_url = home_url();
+        
+        // Don't fetch if client_id is localhost (security measure)
+        $parsed_client_id = wp_parse_url($client_id_url);
+        if ($parsed_client_id && isset($parsed_client_id['host'])) {
+            $host = $parsed_client_id['host'];
+            if ($host !== '127.0.0.1' && $host !== 'localhost' && $host !== '[::1]') {
+                $client_response = wp_remote_get($client_id_url, array(
+                    'timeout' => 30,
+                    'headers' => array(
+                        'Accept' => 'application/json,text/html'
+                    )
+                ));
+                
+                if (!is_wp_error($client_response)) {
+                    $content_type = wp_remote_retrieve_header($client_response, 'content-type');
+                    if (strpos($content_type, 'application/json') !== false) {
+                        $client_info = json_decode(wp_remote_retrieve_body($client_response), true);
+                    }
+                }
+                
+                error_log("Peace Protocol: Fetched client info from {$client_id_url}: " . json_encode($client_info));
+            }
+        }
+        
+        // Make the token exchange request
+        $response = wp_remote_post($token_endpoint, array(
+            'body' => array(
+                'grant_type' => 'authorization_code',
+                'code' => $code,
+                'client_id' => home_url(),
+                'redirect_uri' => home_url() . '/?peace_indieauth_callback=1',
+                'code_verifier' => $code_verifier
+            ),
+            'timeout' => 30
+        ));
+        
+        if (is_wp_error($response)) {
+            wp_send_json_error('Token exchange request failed: ' . $response->get_error_message());
+            return;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $profile_data = json_decode($body, true);
+        
+        if (!$profile_data) {
+            wp_send_json_error('Invalid JSON response from token endpoint');
+            return;
+        }
+        
+        if (!isset($profile_data['me'])) {
+            wp_send_json_error('Missing "me" property in token endpoint response');
+            return;
+        }
+        
+        // Check for OAuth 2.0 error responses
+        if (isset($profile_data['error'])) {
+            $error_description = isset($profile_data['error_description']) ? $profile_data['error_description'] : '';
+            wp_send_json_error('Token endpoint error: ' . $profile_data['error'] . ($error_description ? ' - ' . $error_description : ''));
+            return;
+        }
+        
+        // Authorization Server Confirmation: Verify the returned profile URL
+        $returned_profile_url = $profile_data['me'];
+        $original_domain = $target_site;
+        
+        // Check if the returned profile URL is an exact match or was encountered during discovery
+        $profile_urls_encountered = array($original_domain);
+        if ($metadata && isset($metadata['issuer'])) {
+            $profile_urls_encountered[] = $metadata['issuer'];
+        }
+        
+        $needs_verification = true;
+        foreach ($profile_urls_encountered as $encountered_url) {
+            if ($returned_profile_url === $encountered_url) {
+                $needs_verification = false;
+                break;
+            }
+        }
+        
+        // If verification is needed, discover the authorization server from the returned profile URL
+        if ($needs_verification) {
+            $returned_metadata = peace_protocol_discover_indieauth_metadata($returned_profile_url);
+            if (!$returned_metadata || !isset($returned_metadata['authorization_endpoint'])) {
+                wp_send_json_error('Failed to verify authorization server for returned profile URL');
+                return;
+            }
+            
+            // Verify the authorization endpoints match
+            $original_auth_endpoint = $metadata['authorization_endpoint'] ?? '';
+            $returned_auth_endpoint = $returned_metadata['authorization_endpoint'] ?? '';
+            
+            if ($original_auth_endpoint !== $returned_auth_endpoint) {
+                wp_send_json_error('Authorization server mismatch for returned profile URL');
+                return;
+            }
+            
+            error_log("Peace Protocol: Verified authorization server for returned profile URL: {$returned_profile_url}");
+        }
+        
+        // Create or get the IndieAuth user
+        $user = peace_protocol_create_or_get_indieauth_user($profile_data['me'], $profile_data);
+        
+        if (!$user) {
+            wp_send_json_error('Failed to create user account');
+            return;
+        }
+        
+        // Generate a Peace Protocol token for this user
+        $token = wp_generate_password(64, false);
+        
+        // Store the token in user meta
+        update_user_meta($user->ID, 'peace_protocol_token', $token);
+        update_user_meta($user->ID, 'peace_protocol_site', $target_site);
+        update_user_meta($user->ID, 'peace_protocol_auth_method', 'indieauth');
+        update_user_meta($user->ID, 'peace_protocol_profile_url', $profile_data['me']);
+        
+        // Log the successful IndieAuth login
+        error_log("Peace Protocol: Successful IndieAuth login for user {$user->ID} from site {$target_site}");
+        
+        wp_send_json_success([
+            'message' => 'IndieAuth login successful',
+            'user_id' => $user->ID,
+            'profile_url' => $profile_data['me'],
+            'site' => $target_site,
+            'auth_method' => 'indieauth'
+        ]);
+        
+    } catch (Exception $e) {
+        error_log('Peace Protocol: IndieAuth token exchange error: ' . $e->getMessage());
+        wp_send_json_error('Token exchange failed: ' . $e->getMessage());
+    }
+}
+
+// Helper function for base64url encoding
+function base64url_encode($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+// Discover IndieAuth metadata function moved to top of file to avoid function order issues
+
+// Refresh IndieAuth access token
+function peace_protocol_refresh_indieauth_token($user_id, $metadata = null) {
+    $refresh_token = get_user_meta($user_id, 'indieauth_refresh_token', true);
+    $target_site = get_user_meta($user_id, 'peace_protocol_site', true);
+    
+    if (!$refresh_token || !$target_site) {
+        return false;
+    }
+    
+    // If no metadata provided, discover it
+    if (!$metadata) {
+        $metadata = peace_protocol_discover_indieauth_metadata($target_site);
+        if (!$metadata) {
+            return false;
+        }
+    }
+    
+    // Use token endpoint for refresh
+    $token_endpoint = $metadata['token_endpoint'] ?? null;
+    if (!$token_endpoint) {
+        error_log("Peace Protocol: No token endpoint available for refresh");
+        return false;
+    }
+    
+    // Make refresh request
+    $response = wp_remote_post($token_endpoint, array(
+        'body' => array(
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refresh_token,
+            'client_id' => home_url()
+        ),
+        'timeout' => 30
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('Peace Protocol: Refresh token request failed: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $token_data = json_decode($body, true);
+    
+    if (!$token_data || isset($token_data['error'])) {
+        $error = isset($token_data['error']) ? $token_data['error'] : 'Invalid response';
+        error_log("Peace Protocol: Refresh token error: {$error}");
+        return false;
+    }
+    
+    // Update stored tokens
+    if (isset($token_data['access_token'])) {
+        update_user_meta($user_id, 'indieauth_access_token', $token_data['access_token']);
+    }
+    
+    if (isset($token_data['refresh_token'])) {
+        update_user_meta($user_id, 'indieauth_refresh_token', $token_data['refresh_token']);
+    }
+    
+    if (isset($token_data['expires_in'])) {
+        $expires_at = time() + intval($token_data['expires_in']);
+        update_user_meta($user_id, 'indieauth_token_expires_at', $expires_at);
+    }
+    
+    if (isset($token_data['scope'])) {
+        update_user_meta($user_id, 'indieauth_scope', $token_data['scope']);
+    }
+    
+    error_log("Peace Protocol: Successfully refreshed access token for user {$user_id}");
+    return $token_data;
+}
+
+// Introspect IndieAuth access token
+function peace_protocol_introspect_indieauth_token($access_token, $metadata = null) {
+    if (!$metadata) {
+        // We need to discover metadata, but we don't have the target site
+        // This would need to be called with metadata for now
+        return false;
+    }
+    
+    $introspection_endpoint = $metadata['introspection_endpoint'] ?? null;
+    if (!$introspection_endpoint) {
+        error_log("Peace Protocol: No introspection endpoint available");
+        return false;
+    }
+    
+    // Make introspection request
+    $response = wp_remote_post($introspection_endpoint, array(
+        'body' => array(
+            'token' => $access_token
+        ),
+        'timeout' => 30
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('Peace Protocol: Token introspection failed: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $introspection_data = json_decode($body, true);
+    
+    if (!$introspection_data) {
+        error_log("Peace Protocol: Invalid introspection response");
+        return false;
+    }
+    
+    return $introspection_data;
+}
+
+// Fetch user info from IndieAuth userinfo endpoint
+function peace_protocol_fetch_indieauth_userinfo($access_token, $metadata = null) {
+    if (!$metadata) {
+        // We need to discover metadata, but we don't have the target site
+        // This would need to be called with metadata for now
+        return false;
+    }
+    
+    $userinfo_endpoint = $metadata['userinfo_endpoint'] ?? null;
+    if (!$userinfo_endpoint) {
+        error_log("Peace Protocol: No userinfo endpoint available");
+        return false;
+    }
+    
+    // Make userinfo request
+    $response = wp_remote_get($userinfo_endpoint, array(
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $access_token,
+            'Accept' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('Peace Protocol: Userinfo request failed: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $body = wp_remote_retrieve_body($response);
+    $userinfo_data = json_decode($body, true);
+    
+    if (!$userinfo_data) {
+        error_log("Peace Protocol: Invalid userinfo response");
+        return false;
+    }
+    
+    return $userinfo_data;
+}
+
+// AJAX handler for IndieAuth discovery (server-side to avoid CORS)
+function peace_protocol_discover_indieauth_handler() {
+    error_log("Peace Protocol: IndieAuth discovery handler called");
+    
+    try {
+        // Verify nonce for security
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'peace_protocol_indieauth')) {
+            error_log("Peace Protocol: Invalid nonce in IndieAuth discovery request");
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
+        
+        // Simple test first
+        if (!isset($_POST['url'])) {
+            error_log("Peace Protocol: No URL in POST data");
+            wp_send_json_error('No URL provided');
+            return;
+        }
+        
+        $url = sanitize_text_field($_POST['url']);
+        error_log("Peace Protocol: IndieAuth discovery requested for URL: {$url}");
+        
+        if (!$url) {
+            error_log("Peace Protocol: Empty URL provided for IndieAuth discovery");
+            wp_send_json_error('No URL provided');
+            return;
+        }
+        
+        // Validate URL
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            error_log("Peace Protocol: Invalid URL format for IndieAuth discovery: {$url}");
+            wp_send_json_error('Invalid URL format');
+            return;
+        }
+        
+        error_log("Peace Protocol: About to call discovery function for: {$url}");
+        
+        // Use our existing server-side discovery function
+        $metadata = peace_protocol_discover_indieauth_metadata($url);
+        
+        if ($metadata) {
+            error_log("Peace Protocol: IndieAuth discovery successful for {$url}: " . json_encode($metadata));
+            wp_send_json_success($metadata);
+        } else {
+            error_log("Peace Protocol: IndieAuth discovery failed for {$url}");
+            wp_send_json_error('Failed to discover IndieAuth metadata');
+        }
+    } catch (Exception $e) {
+        error_log("Peace Protocol: Exception in IndieAuth discovery handler: " . $e->getMessage());
+        error_log("Peace Protocol: Exception trace: " . $e->getTraceAsString());
+        wp_send_json_error('Internal server error: ' . $e->getMessage());
+    } catch (Error $e) {
+        error_log("Peace Protocol: Fatal error in IndieAuth discovery handler: " . $e->getMessage());
+        error_log("Peace Protocol: Error trace: " . $e->getTraceAsString());
+        wp_send_json_error('Internal server error: ' . $e->getMessage());
+    }
+}
+
+// Register the IndieAuth discovery AJAX handler after the function is defined
+add_action('wp_ajax_peace_protocol_discover_indieauth', 'peace_protocol_discover_indieauth_handler');
+add_action('wp_ajax_nopriv_peace_protocol_discover_indieauth', 'peace_protocol_discover_indieauth_handler');
+
+// AJAX handler for refreshing IndieAuth tokens
+function peace_protocol_refresh_indieauth_token_handler() {
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'peace_protocol_indieauth')) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id'] ?? 0);
+    
+    if (!$user_id) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    // Check if user exists and has IndieAuth data
+    $user = get_user_by('ID', $user_id);
+    if (!$user) {
+        wp_send_json_error('User not found');
+        return;
+    }
+    
+    $auth_method = get_user_meta($user_id, 'peace_protocol_auth_method', true);
+    if ($auth_method !== 'indieauth') {
+        wp_send_json_error('User not authenticated via IndieAuth');
+        return;
+    }
+    
+    // Attempt to refresh the token
+    $result = peace_protocol_refresh_indieauth_token($user_id);
+    
+    if ($result) {
+        wp_send_json_success([
+            'message' => 'Token refreshed successfully',
+            'access_token' => $result['access_token'] ?? null,
+            'expires_in' => $result['expires_in'] ?? null,
+            'scope' => $result['scope'] ?? null
+        ]);
+    } else {
+        wp_send_json_error('Failed to refresh token');
+    }
+}
+
+// Register rewrite endpoints for IndieAuth
+add_action('init', function() {
+    add_rewrite_rule('^peace-indieauth-callback/?$', 'index.php?peace_indieauth_callback=1', 'top');
+    add_rewrite_rule('^peace-indieauth-authorization/?$', 'index.php?peace_indieauth_authorization=1', 'top');
+    add_rewrite_rule('^peace-indieauth-token/?$', 'index.php?peace_indieauth_token=1', 'top');
+    add_rewrite_tag('%peace_indieauth_callback%', '1');
+    add_rewrite_tag('%peace_indieauth_authorization%', '1');
+    add_rewrite_tag('%peace_indieauth_token%', '1');
+});
+
+// Flush rewrite rules on plugin activation
+register_activation_hook(__FILE__, function() {
+    add_rewrite_rule('^peace-indieauth-callback/?$', 'index.php?peace_indieauth_callback=1', 'top');
+    add_rewrite_rule('^peace-indieauth-authorization/?$', 'index.php?peace_indieauth_authorization=1', 'top');
+    add_rewrite_rule('^peace-indieauth-token/?$', 'index.php?peace_indieauth_token=1', 'top');
+    add_rewrite_tag('%peace_indieauth_callback%', '1');
+    add_rewrite_tag('%peace_indieauth_authorization%', '1');
+    add_rewrite_tag('%peace_indieauth_token%', '1');
+    flush_rewrite_rules();
+});
+
+// Removed old IndieAuth callback handler from template_redirect hook - now handled in parse_request
+
+// Handle IndieAuth callback and token exchange endpoints
+add_action('parse_request', function($wp) {
+    // Check if this is our IndieAuth callback endpoint
+    if (isset($wp->request) && $wp->request === 'peace-indieauth-callback') {
+        
+        // Debug logging
+        error_log('Peace Protocol: IndieAuth callback received');
+        error_log('Peace Protocol: GET parameters: ' . print_r($_GET, true));
+        error_log('Peace Protocol: Request URI: ' . $_SERVER['REQUEST_URI']);
+        
+        // Get callback parameters
+        $code = sanitize_text_field(wp_unslash($_GET['code'] ?? ''));
+        $state = sanitize_text_field(wp_unslash($_GET['state'] ?? ''));
+        $error = sanitize_text_field(wp_unslash($_GET['error'] ?? ''));
+        $iss = esc_url_raw(wp_unslash($_GET['iss'] ?? ''));
+        
+        if ($error) {
+            error_log('Peace Protocol: IndieAuth callback error: ' . $error);
+            wp_die('IndieAuth authorization failed: ' . esc_html($error), 'Authorization Failed', array('response' => 400));
+        }
+        
+        if (!$code || !$state || !$iss) {
+            error_log('Peace Protocol: Missing required callback parameters');
+            wp_die('Missing required callback parameters', 'Invalid Request', array('response' => 400));
+        }
+        
+        // Get the authorization server domain from iss parameter
+        $auth_server_domain = parse_url($iss, PHP_URL_HOST);
+        if (!$auth_server_domain) {
+            error_log('Peace Protocol: Invalid iss parameter: ' . $iss);
+            wp_die('Invalid authorization server', 'Invalid Request', array('response' => 400));
+        }
+        
+        error_log('Peace Protocol: Authorization server domain: ' . $auth_server_domain);
+        
+        // Create or get federated user based on the authorization server domain
+        $user = peace_protocol_create_or_get_indieauth_user($iss, array('me' => $iss));
+        
+        if (!$user) {
+            error_log('Peace Protocol: Failed to create/get IndieAuth user');
+            wp_die('Failed to create user account', 'User Creation Failed', array('response' => 500));
+        }
+        
+        error_log('Peace Protocol: User created/found: ' . $user->ID);
+        
+        // Log in the user
+        wp_set_current_user($user->ID);
+        wp_set_auth_cookie($user->ID);
+        
+        error_log('Peace Protocol: User logged in successfully');
+        
+        // Generate a Peace Protocol authorization code
+        $auth_code = wp_generate_password(32, false);
+        $authorizations = get_option('peace_protocol_authorizations', array());
+        $authorizations[$auth_code] = array(
+            'site_url' => $iss, // The authorization server (authenticating site)
+            'user_id' => $user->ID,
+            'expires' => time() + 300, // 5 minutes
+            'used' => false
+        );
+        update_option('peace_protocol_authorizations', $authorizations);
+        
+        error_log('Peace Protocol: Generated authorization code: ' . $auth_code);
+        
+        // Set session data to show the peace modal after login
+        if (!session_id()) {
+            session_start();
+        }
+        $_SESSION['peace_show_modal_after_login'] = true;
+        $_SESSION['peace_federated_site'] = $iss;
+        $_SESSION['peace_federated_token'] = 'indieauth_' . $user->ID; // Use a token identifier for IndieAuth users
+        $_SESSION['peace_authorization_code'] = $auth_code;
+        
+        error_log('Peace Protocol: Session data stored for IndieAuth user');
+        
+        // Redirect to the homepage with the peace modal
+        $redirect_url = add_query_arg(array(
+            'peace_show_modal' => '1'
+        ), home_url());
+        
+        error_log('Peace Protocol: Redirecting to homepage with peace modal: ' . $redirect_url);
+        
+        wp_redirect($redirect_url);
+        exit;
+    }
+    
+    // Check if this is our IndieAuth token exchange endpoint
+    if (isset($wp->request) && $wp->request === 'peace-indieauth-token') {
+        
+        // Only handle POST requests for token exchange
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            exit('Method Not Allowed');
+        }
+        
+        // Get POST parameters
+        $grant_type = sanitize_text_field(wp_unslash($_POST['grant_type'] ?? ''));
+        $code = sanitize_text_field(wp_unslash($_POST['code'] ?? ''));
+        $client_id = esc_url_raw(wp_unslash($_POST['client_id'] ?? ''));
+        $redirect_uri = esc_url_raw(wp_unslash($_POST['redirect_uri'] ?? ''));
+        $code_verifier = sanitize_text_field(wp_unslash($_POST['code_verifier'] ?? ''));
+        
+        // Validate required parameters
+        if ($grant_type !== 'authorization_code' || !$code || !$client_id || !$redirect_uri) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'invalid_request', 'error_description' => 'Missing required parameters']);
+            exit;
+        }
+        
+        // Get the authorization code
+        $authorization_codes = get_option('peace_protocol_indieauth_codes', array());
+        if (!isset($authorization_codes[$code]) || $authorization_codes[$code]['used'] || $authorization_codes[$code]['expires'] < time()) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'invalid_grant', 'error_description' => 'Invalid or expired authorization code']);
+            exit;
+        }
+        
+        $auth_code_data = $authorization_codes[$code];
+        
+        // Validate client_id and redirect_uri match
+        if ($auth_code_data['client_id'] !== $client_id || $auth_code_data['redirect_uri'] !== $redirect_uri) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'invalid_grant', 'error_description' => 'Client ID or redirect URI mismatch']);
+            exit;
+        }
+        
+        // Validate PKCE if present
+        if ($auth_code_data['code_challenge']) {
+            if (!$code_verifier) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'invalid_request', 'error_description' => 'Code verifier required']);
+                exit;
+            }
+            
+            // Verify code challenge
+            $expected_challenge = base64url_encode(hash('sha256', $code_verifier, true));
+            if ($expected_challenge !== $auth_code_data['code_challenge']) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'invalid_grant', 'error_description' => 'Invalid code verifier']);
+                exit;
+            }
+        }
+        
+        // Mark code as used
+        $authorization_codes[$code]['used'] = true;
+        update_option('peace_protocol_indieauth_codes', $authorization_codes);
+        
+        // Get user data
+        $user = get_user_by('ID', $auth_code_data['user_id']);
+        if (!$user) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'server_error', 'error_description' => 'User not found']);
+            exit;
+        }
+        
+        // Generate access token
+        $access_token = wp_generate_password(32, false, false);
+        $expires_in = 3600; // 1 hour
+        
+        // Store access token
+        $access_tokens = get_option('peace_protocol_indieauth_access_tokens', array());
+        $access_tokens[$access_token] = array(
+            'user_id' => $user->ID,
+            'client_id' => $client_id,
+            'scope' => $auth_code_data['scope'],
+            'expires' => time() + $expires_in,
+            'created' => time()
+        );
+        update_option('peace_protocol_indieauth_access_tokens', $access_tokens);
+        
+        // Return token response
+        header('Content-Type: application/json');
+        $response = array(
+            'access_token' => $access_token,
+            'token_type' => 'Bearer',
+            'scope' => $auth_code_data['scope'],
+            'me' => $auth_code_data['me'] ?: home_url()
+        );
+        
+        if ($expires_in) {
+            $response['expires_in'] = $expires_in;
+        }
+        
+        echo json_encode($response);
+        exit;
+    }
+});
+
+
+
+
+
+
+
+
+
+

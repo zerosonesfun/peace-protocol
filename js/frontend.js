@@ -21,6 +21,22 @@
         } catch (e) {}
         return [];
     }
+    
+    // Get IndieAuth identities (users authenticated via IndieAuth)
+    function getIndieAuthIdentities() {
+        try {
+            const val = localStorage.getItem('peace-indieauth-identities');
+            if (!val) return [];
+            const arr = JSON.parse(val);
+            if (Array.isArray(arr)) return arr;
+        } catch (e) {}
+        return [];
+    }
+    
+    // Set IndieAuth identities
+    function setIndieAuthIdentities(identities) {
+        localStorage.setItem('peace-indieauth-identities', JSON.stringify(identities));
+    }
 
     function setIdentities(identities) {
         localStorage.setItem(LS_KEY, JSON.stringify(identities));
@@ -29,10 +45,44 @@
     // Always set up the global functions for the button/modal system
     window.peaceProtocolGetIdentities = getIdentities;
     window.peaceProtocolSetIdentities = setIdentities;
+    window.peaceProtocolGetIndieAuthIdentities = getIndieAuthIdentities;
+    window.peaceProtocolSetIndieAuthIdentities = setIndieAuthIdentities;
 
     // Debug logging
     // console.log('Peace Protocol: Global functions set up');
     // console.log('Peace Protocol: Identities found:', getIdentities().length);
+    
+    // Helper function to refresh IndieAuth tokens if needed
+    async function refreshIndieAuthTokenIfNeeded(userId) {
+        try {
+            const response = await fetch('/wp-admin/admin-ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'peace_protocol_refresh_indieauth_token',
+                    user_id: userId,
+                    _wpnonce: window.peaceData?.nonce || ''
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                // console.log('[Peace Protocol] IndieAuth token refreshed successfully');
+                return result.data;
+            } else {
+                // console.log('[Peace Protocol] IndieAuth token refresh failed:', result.data);
+                return false;
+            }
+        } catch (error) {
+            // console.error('[Peace Protocol] IndieAuth token refresh error:', error);
+            return false;
+        }
+    }
+    
+    // Make refresh function globally available
+    window.peaceProtocolRefreshIndieAuthToken = refreshIndieAuthTokenIfNeeded;
 
     // Federated login logic
     window.peaceProtocolFederatedLogin = function(options = {}) {
@@ -105,8 +155,15 @@
         const authSite = url.searchParams.get('peace_federated_site');
         const authState = url.searchParams.get('peace_federated_state');
         
+        // Check for IndieAuth callback parameters
+        const indieAuthCode = url.searchParams.get('code');
+        const indieAuthState = url.searchParams.get('state');
+        const indieAuthIss = url.searchParams.get('iss');
+        const indieAuthAction = url.searchParams.get('action');
+        
         // Log what we found in the URL
         // console.log('[Peace Protocol] URL params - authCode:', authCode, 'site:', authSite, 'state:', authState);
+        // console.log('[Peace Protocol] IndieAuth params - code:', indieAuthCode, 'state:', indieAuthState, 'iss:', indieAuthIss);
         
         // Handle authorization codes received in URL parameters
         if (authCode && authSite) {
@@ -144,6 +201,19 @@
             } catch (e) {
                 // console.error('[Peace Protocol] Error storing authorization code:', e);
             }
+        }
+        
+        // Handle IndieAuth callback
+        if (indieAuthAction === 'peace_protocol_indieauth_callback' && indieAuthCode && indieAuthState) {
+            // console.log('[Peace Protocol] IndieAuth callback detected, processing...');
+            
+            // The IndieAuth callback is handled by the shortcodes.php JavaScript
+            // This is just for logging and potential future enhancements
+            // console.log('[Peace Protocol] IndieAuth callback parameters:', {
+            //     code: indieAuthCode,
+            //     state: indieAuthState,
+            //     iss: indieAuthIss
+            // });
         }
         
         // Note: Authorization code handling is now done server-side in template_redirect

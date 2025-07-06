@@ -4,7 +4,7 @@ Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.3
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,12 +42,14 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 - **Automatic Feed Subscription**: Automatically subscribe to peace feeds from sites you connect with
 - **Token Management**: Generate, rotate, and manage authentication tokens
 - **User Banning System**: Ban problematic users with reason tracking
+- **IndieAuth Support**: Alternative authentication using the IndieAuth standard with PKCE
 
 ### **Federated Login System**
 - **Cross-Site Authentication**: Users from remote sites can comment as their site identity
 - **Seamless Integration**: Works with existing WordPress comment systems
 - **Secure Handshake**: Only sites completing the cryptographic handshake can create federated logins
 - **Automatic User Creation**: Creates federated users automatically after successful handshake
+- **Dual Authentication**: Support for both Peace Protocol tokens and IndieAuth standard
 
 ### **Admin Interface**
 - **Token Management**: Generate, view, and delete authentication tokens
@@ -62,6 +64,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 - **Shortcode Support**: Use `[peace_hand_button]` to manually place the button
 - **Responsive Design**: Works on all devices and screen sizes
 - **Dark Mode Support**: Automatically adapts to user's color scheme preference
+- **Choice Modal**: User-friendly modal to choose between Peace Protocol and IndieAuth authentication
 
 ### **Technical Features**
 - **REST API**: Modern REST API endpoints for all functionality
@@ -69,6 +72,8 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 - **CORS Support**: Proper CORS headers for cross-site communication
 - **Translation Ready**: Full internationalization support with multiple languages
 - **Custom Post Types**: Uses custom post types for peace logs
+- **IndieAuth Endpoints**: Full IndieAuth specification compliance with authorization and token endpoints
+- **PKCE Support**: Proof Key for Code Exchange for enhanced security
 
 ## 🚀 **How It Works**
 
@@ -81,13 +86,27 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 
 ### **Federated Login Process**
 
+#### **Peace Protocol Authentication**
 1. **User from Site A** visits Site B and wants to comment
 2. **User clicks "Send Peace"** button on Site B
-3. **Site B redirects** to Site A for authentication
-4. **Site A validates** the user and generates an authorization code
-5. **User is redirected** back to Site B with the authorization code
-6. **Site B automatically** logs in the user as a federated user from Site A
-7. **User can comment** on Site B as "Logged in as sitea.com"
+3. **User chooses "Login with Peace Protocol"** from the choice modal
+4. **Site B redirects** to Site A for authentication
+5. **Site A validates** the user and generates an authorization code
+6. **User is redirected** back to Site B with the authorization code
+7. **Site B automatically** logs in the user as a federated user from Site A
+8. **User can comment** on Site B as "Logged in as sitea.com"
+
+#### **IndieAuth Authentication**
+1. **User from Site A** visits Site B and wants to comment
+2. **User clicks "Send Peace"** button on Site B
+3. **User chooses "Login with IndieAuth"** from the choice modal
+4. **Site B discovers** IndieAuth endpoints on Site A
+5. **Site B redirects** to Site A's IndieAuth authorization endpoint
+6. **Site A validates** the user and generates an authorization code
+7. **User is redirected** back to Site B with the authorization code
+8. **Site B exchanges** the code for an access token using PKCE
+9. **Site B automatically** logs in the user as a federated user from Site A
+10. **User can comment** on Site B as "Logged in as sitea.com"
 
 ### **Security Flow**
 
@@ -187,6 +206,17 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.2.0 =
+* **Major Feature**: Added IndieAuth support as an alternative authentication method
+* **PKCE Security**: Implemented Proof Key for Code Exchange for enhanced security
+* **Dual Authentication**: Users can now choose between Peace Protocol tokens and IndieAuth
+* **Choice Modal**: New user-friendly modal to select authentication method
+* **IndieAuth Endpoints**: Full IndieAuth specification compliance with authorization and token endpoints
+* **Enhanced UX**: Improved modal design with dark mode support and better styling
+* **Discovery System**: Automatic IndieAuth endpoint discovery with fallback mechanisms
+* **Cross-Site Compatibility**: Seamless integration with existing IndieAuth implementations
+* **Security**: Maintained all existing security features while adding IndieAuth support
 
 = 1.1.3 =
 * **Code Quality**: Fixed PHP syntax errors and improved code structure

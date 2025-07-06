@@ -254,9 +254,132 @@ if (!function_exists('peace_protocol_render_hand_button')) {
         <?php
         echo '<!-- Peace Protocol: Success modal HTML output -->';
         ?>
-        <div id="peace-federated-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100001;align-items:center;justify-content:center;">
+        <!-- Initial choice modal -->
+        <div id="peace-choice-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100001;align-items:center;justify-content:center;">
+          <div id="peace-choice-modal-content" style="background:#fff;max-width:400px;padding:1.5rem;border-radius:0.5rem;color:#333;text-align:center;">
+            <h2><?php esc_html_e('Choose Login Method', 'peace-protocol'); ?></h2>
+            <p><?php esc_html_e('How would you like to authenticate?', 'peace-protocol'); ?></p>
+            <div style="display:flex;flex-direction:column;gap:0.8em;margin:1.5em 0;">
+              <button id="peace-protocol-login-btn" class="button button-primary" style="padding:0.8em;font-size:1em;">
+                <?php esc_html_e('Login with Peace Protocol', 'peace-protocol'); ?>
+              </button>
+              <button id="peace-indieauth-login-btn" class="button button-primary" style="padding:0.8em;font-size:1em;">
+                <?php esc_html_e('Login with IndieAuth', 'peace-protocol'); ?>
+              </button>
+              <button id="peace-what-is-btn" class="button" style="padding:0.8em;font-size:1em;">
+                <?php esc_html_e('What\'s this?', 'peace-protocol'); ?>
+              </button>
+            </div>
+            <button id="peace-choice-cancel" class="button">Cancel</button>
+          </div>
+        </div>
+        
+        <style>
+        /* Button styling for new modals */
+        #peace-choice-modal .button,
+        #peace-info-modal .button {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+            color: #333;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1.4;
+            transition: all 0.2s ease;
+        }
+        
+        #peace-choice-modal .button:hover,
+        #peace-info-modal .button:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        #peace-choice-modal .button-primary,
+        #peace-info-modal .button-primary {
+            background: #0073aa;
+            border-color: #0073aa;
+            color: white;
+        }
+        
+        #peace-choice-modal .button-primary:hover,
+        #peace-info-modal .button-primary:hover {
+            background: #005a87;
+            border-color: #005a87;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            #peace-choice-modal-content {
+                background: #1a1a1a !important;
+                color: #eee !important;
+            }
+            
+            #peace-info-modal-content {
+                background: #1a1a1a !important;
+                color: #eee !important;
+            }
+            
+            #peace-federated-domain {
+                border-bottom-color: #666 !important;
+                color: #eee !important;
+            }
+            
+            #peace-federated-domain:focus {
+                border-bottom-color: #fff !important;
+            }
+            
+            #peace-note {
+                border-bottom-color: #666 !important;
+                color: #eee !important;
+            }
+            
+            #peace-note:focus {
+                border-bottom-color: #fff !important;
+            }
+            
+            #peace-info-modal-content a {
+                color: #60a5fa !important;
+            }
+            
+            #peace-info-modal-content a:hover {
+                color: #93c5fd !important;
+            }
+            
+            #peace-choice-modal .button,
+            #peace-info-modal .button {
+                background: #333 !important;
+                border-color: #555 !important;
+                color: #eee !important;
+            }
+            
+            #peace-choice-modal .button:hover,
+            #peace-info-modal .button:hover {
+                background: #444 !important;
+                border-color: #666 !important;
+            }
+            
+            #peace-choice-modal .button-primary,
+            #peace-info-modal .button-primary {
+                background: #0073aa !important;
+                border-color: #0073aa !important;
+                color: white !important;
+            }
+            
+            #peace-choice-modal .button-primary:hover,
+            #peace-info-modal .button-primary:hover {
+                background: #005a87 !important;
+                border-color: #005a87 !important;
+            }
+        }
+        </style>
+
+        <!-- Site URL modal (reused for both methods) -->
+        <div id="peace-federated-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100002;align-items:center;justify-content:center;">
           <div id="peace-federated-modal-content" style="max-width:400px;padding:1rem;border-radius:0.5rem;">
-            <h2><?php esc_html_e('Log in as your site', 'peace-protocol'); ?></h2>
+            <h2 id="peace-federated-title"><?php esc_html_e('Log in as your site', 'peace-protocol'); ?></h2>
             <p><?php esc_html_e('Enter your domain (e.g. https://yoursite.com):', 'peace-protocol'); ?></p>
             <input type="text" id="peace-federated-domain" style="width:100%;margin-bottom:0.7em;color:inherit;" placeholder="https://yoursite.com" />
             <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5em;">
@@ -264,13 +387,28 @@ if (!function_exists('peace_protocol_render_hand_button')) {
               <button id="peace-federated-submit" class="button button-primary">Continue</button>
             </div>
             <div id="peace-federated-error" style="color:#b91c1c;font-size:0.97em;margin-top:0.5em;display:none;"></div>
-            <div style="margin-top:1em;text-align:center;border-top:1px solid #eee;padding-top:1em;">
+            <div style="margin-top:1em;text-align:center;">
               <a href="#" id="peace-send-as-current-site" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
                 <?php /* esc_html_e('', 'peace-protocol'); */ ?>
               </a>
-              <a href="https://github.com/zerosonesfun/peace-protocol" id="what-is-peace-protocol" style="font-size:0.97em;color:#2563eb;text-decoration:underline;cursor:pointer;">
-                <?php esc_html_e('What is this?', 'peace-protocol'); ?>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info modal -->
+        <div id="peace-info-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:100003;align-items:center;justify-content:center;">
+          <div id="peace-info-modal-content" style="background:#fff;max-width:500px;padding:1.5rem;border-radius:0.5rem;color:#333;">
+            <h2><?php esc_html_e('What is Peace Protocol?', 'peace-protocol'); ?></h2>
+            <p><?php esc_html_e('Peace Protocol is a decentralized authentication system that allows WordPress administrators to securely authenticate across different websites without sharing passwords or personal information.', 'peace-protocol'); ?></p>
+            <p><?php esc_html_e('It works by using cryptographic tokens and secure handshakes between sites, ensuring that only authorized administrators can access federated features.', 'peace-protocol'); ?></p>
+            <p><?php esc_html_e('This plugin supports both the original Peace Protocol method and the IndieAuth standard for maximum compatibility.', 'peace-protocol'); ?></p>
+            <div style="text-align:center;margin-top:1.5em;">
+              <a href="https://github.com/zerosonesfun/peace-protocol" target="_blank" style="color:#2563eb;text-decoration:underline;">
+                <?php esc_html_e('Learn more on GitHub', 'peace-protocol'); ?>
               </a>
+            </div>
+            <div style="text-align:center;margin-top:1em;">
+              <button id="peace-info-close" class="button button-primary">Close</button>
             </div>
           </div>
         </div>
@@ -351,9 +489,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             }
 
             btn.addEventListener('click', () => {
-                // Always show federated login modal first, so user can choose which site to send peace as
-                if (window.peaceProtocolFederatedLogin) {
-                    window.peaceProtocolFederatedLogin();
+                // Show the choice modal first
+                if (window.peaceProtocolShowChoiceModal) {
+                    window.peaceProtocolShowChoiceModal();
                 }
             });
 
@@ -365,12 +503,12 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 const identities = refreshIdentities();
                 const note = noteEl.value.trim();
                 if (note.length > 50) {
-                    alert('<?php echo esc_js(__('Note must be 50 characters or less.', 'peace-protocol')); ?>');
+                    alert('Note must be 50 characters or less.');
                     return;
                 }
                 // Use selected identity
                 if (!selectedIdentity || !selectedIdentity.token || !selectedIdentity.site) {
-                    alert('<?php echo esc_js(__('No valid Peace Protocol identity found in this browser. Please visit your site\'s admin to generate a token.', 'peace-protocol')); ?>');
+                    alert('No valid Peace Protocol identity found in this browser. Please visit your site\'s admin to generate a token.');
                     modal.style.display = 'none';
                     return;
                 }
@@ -476,7 +614,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                             });
                         }
                     } else {
-                        alert('<?php echo esc_js(__('Failed to send peace. Please try again.', 'peace-protocol')); ?>' + '\n' + (err && err.message ? err.message : ''));
+                        alert('Failed to send peace. Please try again.\n' + (err && err.message ? err.message : ''));
                     }
                 }
                 sendBtn.disabled = false;
@@ -495,6 +633,17 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 noteCounter.textContent = noteEl.value.length + '/50';
             }
 
+            // Choice modal elements
+            const choiceModal = document.getElementById('peace-choice-modal');
+            const peaceProtocolLoginBtn = document.getElementById('peace-protocol-login-btn');
+            const peaceIndieAuthLoginBtn = document.getElementById('peace-indieauth-login-btn');
+            const peaceWhatIsBtn = document.getElementById('peace-what-is-btn');
+            const peaceChoiceCancel = document.getElementById('peace-choice-cancel');
+
+            // Info modal elements
+            const infoModal = document.getElementById('peace-info-modal');
+            const peaceInfoClose = document.getElementById('peace-info-close');
+
             // Federated login modal logic
             const federatedModal = document.getElementById('peace-federated-modal');
             const federatedDomain = document.getElementById('peace-federated-domain');
@@ -502,6 +651,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
             const federatedSubmit = document.getElementById('peace-federated-submit');
             const federatedError = document.getElementById('peace-federated-error');
             const sendAsCurrentSite = document.getElementById('peace-send-as-current-site');
+            const federatedTitle = document.getElementById('peace-federated-title');
 
             // Redirect modal elements
             const redirectModal = document.getElementById('peace-redirect-modal');
@@ -523,6 +673,48 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     redirectModal.style.display = 'none';
                 };
             };
+
+            // Function to show choice modal
+            window.peaceProtocolShowChoiceModal = function() {
+                choiceModal.style.display = 'flex';
+            };
+
+            // Choice modal event handlers
+            peaceProtocolLoginBtn.addEventListener('click', function() {
+                choiceModal.style.display = 'none';
+                // Show federated modal for Peace Protocol
+                window.peaceProtocolShowFederatedModal(function(domain) {
+                    // This will trigger the regular Peace Protocol flow
+                    if (window.peaceProtocolFederatedLogin) {
+                        window.peaceProtocolFederatedLogin();
+                    }
+                }, 'peace-protocol');
+            });
+
+            peaceIndieAuthLoginBtn.addEventListener('click', function() {
+                choiceModal.style.display = 'none';
+                // Show federated modal for IndieAuth
+                window.peaceProtocolShowFederatedModal(function(domain) {
+                    // This will trigger the IndieAuth flow
+                    if (window.peaceProtocolIndieAuthLogin) {
+                        window.peaceProtocolIndieAuthLogin(domain);
+                    }
+                }, 'indieauth');
+            });
+
+            peaceWhatIsBtn.addEventListener('click', function() {
+                choiceModal.style.display = 'none';
+                infoModal.style.display = 'flex';
+            });
+
+            peaceChoiceCancel.addEventListener('click', function() {
+                choiceModal.style.display = 'none';
+            });
+
+            // Info modal event handlers
+            peaceInfoClose.addEventListener('click', function() {
+                infoModal.style.display = 'none';
+            });
 
             // Function to show send peace modal
             window.peaceProtocolShowSendPeaceModal = function() {
@@ -570,11 +762,19 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 }
             };
 
-            window.peaceProtocolShowFederatedModal = function(cb) {
+            window.peaceProtocolShowFederatedModal = function(cb, authMethod = 'peace-protocol') {
               federatedModal.style.display = 'flex';
               federatedDomain.value = '';
               federatedError.style.display = 'none';
               federatedDomain.focus();
+              
+              // Update title based on authentication method
+              if (authMethod === 'indieauth') {
+                federatedTitle.textContent = 'Login with IndieAuth';
+              } else {
+                federatedTitle.textContent = 'Login with Peace Protocol';
+              }
+              
               federatedSubmit.onclick = function(e) {
                 e.preventDefault(); // Prevent form submission/page reload
                 const domain = federatedDomain.value.trim().replace(/\/$/, '');
@@ -608,11 +808,325 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     modal.style.display = 'flex';
                     resetNoteCounter();
                   } else {
-                    alert('<?php echo esc_js(__('No valid Peace Protocol identity found for this site. Please visit your site\'s admin to generate a token.', 'peace-protocol')); ?>');
+                    alert('No valid Peace Protocol identity found for this site. Please visit your site\'s admin to generate a token.');
                   }
                 };
               }
             };
+
+            // Function to handle regular Peace Protocol login
+            window.peaceProtocolFederatedLogin = function() {
+                // Get the domain from the federated modal
+                const domain = federatedDomain.value.trim().replace(/\/$/, '');
+                if (!domain.match(/^https?:\/\//)) {
+                    alert('Please enter a valid URL (including https://)');
+                    return;
+                }
+                
+                // Original Peace Protocol flow: redirect directly to siteA
+                const state = Math.random().toString(36).slice(2) + Date.now();
+                const returnUrl = encodeURIComponent(window.location.href.split('#')[0]);
+                localStorage.setItem('peace-federated-state', state);
+                localStorage.setItem('peace-federated-return', window.location.href.split('#')[0]);
+                const currentSite = window.location.origin;
+                const url = domain + '/?peace_get_token=1&return_site=' + encodeURIComponent(currentSite) + '&state=' + encodeURIComponent(state);
+                
+                // Direct redirect (no modal)
+                window.location.href = url;
+            };
+
+            // Function to handle IndieAuth login
+            window.peaceProtocolIndieAuthLogin = async function(domain) {
+                // Validate the domain parameter
+                if (!domain || !domain.match(/^https?:\/\//)) {
+                    alert('Please enter a valid URL (including https://)');
+                    return;
+                }
+                
+                try {
+                    // Step 1: Discover IndieAuth metadata using server-side discovery to avoid CORS
+                    console.log('IndieAuth: Starting discovery for domain:', domain);
+                    const metadata = await discoverIndieAuthMetadataServerSide(domain);
+                    if (!metadata || !metadata.authorization_endpoint) {
+                        throw new Error('Could not discover IndieAuth authorization endpoint');
+                    }
+                    
+                    // Generate PKCE code verifier and challenge
+                    const codeVerifier = generateCodeVerifier();
+                    const codeChallenge = await generateCodeChallenge(codeVerifier);
+                    const state = Math.random().toString(36).slice(2) + Date.now();
+                    
+                    // Store PKCE data in localStorage, keyed by state
+                    localStorage.setItem('peace-indieauth-code-verifier-' + state, codeVerifier);
+                    localStorage.setItem('peace-indieauth-state', state);
+                    localStorage.setItem('peace-indieauth-return-url', window.location.href.split('#')[0]);
+                    localStorage.setItem('peace-indieauth-target-site', domain);
+                    localStorage.setItem('peace-indieauth-metadata', JSON.stringify(metadata));
+                    
+                    // Build IndieAuth authorization URL using our custom endpoint
+                    const authUrl = new URL(domain + '/?peace_indieauth_auth=1');
+                    authUrl.searchParams.set('client_id', window.location.origin);
+                    authUrl.searchParams.set('redirect_uri', window.location.origin + '/peace-indieauth-callback/');
+                    authUrl.searchParams.set('state', state);
+                    authUrl.searchParams.set('code_challenge', codeChallenge);
+                    authUrl.searchParams.set('code_challenge_method', 'S256');
+                    authUrl.searchParams.set('scope', 'profile email');
+                    // Set me parameter to the site where the user is authenticating (siteA)
+                    console.log('IndieAuth: Setting me parameter to:', domain);
+                    authUrl.searchParams.set('me', domain);
+                    // Pass the authorization endpoint as a URL parameter
+                    authUrl.searchParams.set('authorization_endpoint', metadata.authorization_endpoint);
+                    
+                    // Debug logging
+                    console.log('IndieAuth: Authorization URL parameters:', {
+                        client_id: window.location.origin,
+                        redirect_uri: window.location.origin + '/peace-indieauth-callback/',
+                        me: domain,
+                        state: state,
+                        scope: 'profile email'
+                    });
+                    console.log('IndieAuth: Full authorization URL:', authUrl.toString());
+                    
+                    // Log the values server-side for debugging
+                    const formData = new FormData();
+                    formData.append('action', 'peace_protocol_debug_log');
+                    formData.append('message', 'IndieAuth: Setting me parameter to: ' + domain + ', authUrl: ' + authUrl.toString());
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        body: formData
+                    }).catch(() => {}); // Ignore errors
+                    
+                    // Redirect to our custom auth endpoint
+                    window.location.href = authUrl.toString();
+                } catch (error) {
+                    console.error('IndieAuth discovery failed:', error);
+                    console.error('Discovery details:', {
+                        domain: domain,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                    
+                    // More detailed error message
+                    let errorMessage = 'Failed to discover IndieAuth endpoint. ';
+                    if (error.message.includes('HTTP')) {
+                        errorMessage += 'The site may not be accessible or may be blocking requests.';
+                    } else if (error.message.includes('No IndieAuth metadata')) {
+                        errorMessage += 'The site does not appear to support IndieAuth. Make sure the site has IndieAuth metadata or authorization endpoints configured.';
+                    } else if (error.message.includes('Metadata missing')) {
+                        errorMessage += 'The site has IndieAuth links but the metadata is incomplete.';
+                    } else {
+                        errorMessage += 'Please make sure the site supports IndieAuth.';
+                    }
+                    
+                    alert(errorMessage);
+                }
+            };
+
+            // PKCE helper functions for IndieAuth
+            function generateCodeVerifier() {
+              const array = new Uint8Array(32);
+              crypto.getRandomValues(array);
+              return base64UrlEncode(array);
+            }
+            
+            function generateCodeChallenge(codeVerifier) {
+              const encoder = new TextEncoder();
+              const data = encoder.encode(codeVerifier);
+              return crypto.subtle.digest('SHA-256', data).then(hash => {
+                return base64UrlEncode(new Uint8Array(hash));
+              });
+            }
+            
+            function base64UrlEncode(buffer) {
+              const base64 = btoa(String.fromCharCode(...buffer));
+              return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            }
+            
+            // Server-side IndieAuth discovery function (avoids CORS issues)
+            async function discoverIndieAuthMetadataServerSide(url) {
+              try {
+                console.log('IndieAuth discovery: Starting server-side discovery for URL:', url);
+                
+                const formData = new FormData();
+                formData.append('action', 'peace_protocol_discover_indieauth');
+                formData.append('url', url);
+                formData.append('_wpnonce', '<?php echo wp_create_nonce("peace_protocol_indieauth"); ?>');
+                
+                const response = await fetch(ajaxurl, {
+                  method: 'POST',
+                  body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  console.log('IndieAuth discovery: Server-side discovery successful:', result.data);
+                  return result.data;
+                } else {
+                  throw new Error(result.data || 'Server-side discovery failed');
+                }
+              } catch (error) {
+                console.error('IndieAuth discovery: Server-side discovery error:', error);
+                throw error;
+              }
+            }
+            
+            // Client-side IndieAuth discovery function (fallback)
+            async function discoverIndieAuthMetadata(url) {
+              try {
+                console.log('IndieAuth discovery: Starting discovery for URL:', url);
+                
+                // Step 1: Fetch the user's URL to find indieauth-metadata link
+                let response;
+                try {
+                  response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                    }
+                  });
+                } catch (fetchError) {
+                  console.error('IndieAuth discovery: Fetch failed, trying HEAD request:', fetchError);
+                  // Try HEAD request as fallback
+                  try {
+                    response = await fetch(url, {
+                      method: 'HEAD',
+                      headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                      }
+                    });
+                  } catch (headError) {
+                    console.error('IndieAuth discovery: HEAD request also failed:', headError);
+                    throw new Error(`Failed to fetch URL: ${fetchError.message}. This might be due to CORS restrictions.`);
+                  }
+                }
+                
+                console.log('IndieAuth discovery: Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Step 2: Look for indieauth-metadata in Link headers first
+                const linkHeader = response.headers.get('Link');
+                console.log('IndieAuth discovery: Link header found:', linkHeader);
+                let metadataUrl = null;
+                
+                if (linkHeader) {
+                  const links = linkHeader.split(',').map(link => {
+                    const [url, ...rels] = link.split(';');
+                    const rel = rels.find(r => r.includes('rel='));
+                    return {
+                      url: url.trim().replace(/[<>]/g, ''),
+                      rel: rel ? rel.split('=')[1].replace(/"/g, '').trim() : ''
+                    };
+                  });
+                  
+                  console.log('IndieAuth discovery: Parsed links:', links);
+                  
+                  const indieauthLink = links.find(link => link.rel === 'indieauth-metadata');
+                  if (indieauthLink) {
+                    metadataUrl = new URL(indieauthLink.url, url).href;
+                    console.log('IndieAuth discovery: Found metadata URL in Link header:', metadataUrl);
+                  }
+                }
+                
+                // Step 3: If no Link header, parse HTML for <link> tags
+                if (!metadataUrl) {
+                  console.log('IndieAuth discovery: No metadata URL in Link header, checking HTML');
+                  const html = await response.text();
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, 'text/html');
+                  
+                  const linkElement = doc.querySelector('link[rel="indieauth-metadata"]');
+                  if (linkElement) {
+                    metadataUrl = new URL(linkElement.href, url).href;
+                    console.log('IndieAuth discovery: Found metadata URL in HTML:', metadataUrl);
+                  } else {
+                    console.log('IndieAuth discovery: No indieauth-metadata link found in HTML');
+                  }
+                }
+                
+                // Step 4: If still no metadata URL, try legacy discovery
+                if (!metadataUrl) {
+                  console.log('IndieAuth discovery: Trying legacy discovery for authorization_endpoint');
+                  
+                  // Try to find authorization_endpoint directly
+                  if (linkHeader) {
+                    const links = linkHeader.split(',').map(link => {
+                      const [url, ...rels] = link.split(';');
+                      const rel = rels.find(r => r.includes('rel='));
+                      return {
+                        url: url.trim().replace(/[<>]/g, ''),
+                        rel: rel ? rel.split('=')[1].replace(/"/g, '').trim() : ''
+                      };
+                    });
+                    
+                    const authLink = links.find(link => link.rel === 'authorization_endpoint');
+                    if (authLink) {
+                      console.log('IndieAuth discovery: Found authorization_endpoint in Link header:', authLink.url);
+                      return {
+                        authorization_endpoint: new URL(authLink.url, url).href,
+                        token_endpoint: null
+                      };
+                    }
+                  }
+                  
+                  // Try HTML link elements for legacy discovery
+                  const html = await response.text();
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(html, 'text/html');
+                  
+                  const authLink = doc.querySelector('link[rel="authorization_endpoint"]');
+                  if (authLink) {
+                    console.log('IndieAuth discovery: Found authorization_endpoint in HTML:', authLink.href);
+                    return {
+                      authorization_endpoint: new URL(authLink.href, url).href,
+                      token_endpoint: null
+                    };
+                  }
+                  
+                  console.log('IndieAuth discovery: No authorization_endpoint found in legacy discovery');
+                  throw new Error('No IndieAuth metadata or authorization endpoint found');
+                }
+                
+                // Step 5: Fetch the metadata document
+                console.log('IndieAuth discovery: Fetching metadata from:', metadataUrl);
+                const metadataResponse = await fetch(metadataUrl, {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json'
+                  }
+                });
+                
+                console.log('IndieAuth discovery: Metadata response status:', metadataResponse.status, metadataResponse.statusText);
+                
+                if (!metadataResponse.ok) {
+                  throw new Error(`Metadata fetch failed: ${metadataResponse.status}`);
+                }
+                
+                const metadata = await metadataResponse.json();
+                console.log('IndieAuth discovery: Parsed metadata:', metadata);
+                
+                // Validate required fields
+                if (!metadata.authorization_endpoint) {
+                  throw new Error('Metadata missing authorization_endpoint');
+                }
+                
+                console.log('IndieAuth discovery: Successfully discovered endpoints:', {
+                  authorization_endpoint: metadata.authorization_endpoint,
+                  token_endpoint: metadata.token_endpoint || 'not provided'
+                });
+                
+                return metadata;
+              } catch (error) {
+                console.error('IndieAuth discovery error:', error);
+                throw error;
+              }
+            }
+
+            // Handle IndieAuth callback - now handled server-side in template_redirect
+            // The server will process the callback and show the completion screen
 
             if (switchSiteLink) {
                 switchSiteLink.addEventListener('click', function(e) {
