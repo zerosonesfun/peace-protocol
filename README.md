@@ -2,6 +2,8 @@
 
 **A secure, decentralized protocol for WordPress administrators to connect their sites and build a network of trust through cryptographic handshakes.**
 
+**Now integrated with IndieAuth!**
+
 Peace Protocol enables WordPress site administrators to authenticate as their website and send cryptographically signed "peace" messages to other WordPress sites running the same protocol. This creates a decentralized network where admins can establish trust relationships, share peace, and enable cross-site interactions.
 
 ## 🔒 **Security-First Design**
