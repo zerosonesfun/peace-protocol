@@ -4,7 +4,7 @@ Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,7 +38,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 
 ### **Core Functionality**
 - **Send Peace**: Send cryptographically signed peace messages to other WordPress sites
-- **Peace Log Wall**: Display received peace messages using the `[peace_log_wall]` shortcode
+- **Peace Log Wall**: Display received peace messages using the `[peaceprotocol_log_wall]` shortcode
 - **Automatic Feed Subscription**: Automatically subscribe to peace feeds from sites you connect with
 - **Token Management**: Generate, rotate, and manage authentication tokens
 - **User Banning System**: Ban problematic users with reason tracking
@@ -61,7 +61,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 ### **Frontend Features**
 - **Peace Button**: Floating peace hand button (✌️) that can be positioned anywhere
 - **Auto-Insertion**: Automatically insert the peace button on your site
-- **Shortcode Support**: Use `[peace_hand_button]` to manually place the button
+- **Shortcode Support**: Use `[peaceprotocol_hand_button]` to manually place the button
 - **Responsive Design**: Works on all devices and screen sizes
 - **Dark Mode Support**: Automatically adapts to user's color scheme preference
 - **Choice Modal**: User-friendly modal to choose between Peace Protocol and IndieAuth authentication
@@ -172,7 +172,7 @@ Federated users are special WordPress users created when someone from another si
 Tokens are cryptographically secure strings used to authenticate your site when sending peace to others. Generating multiple tokens allows you to rotate them for better security, and to revoke tokens if needed without losing access.
 
 = How do I send peace to another site? =
-Use the peace hand button (✌️) on your site or the `[peace_hand_button]` shortcode. Enter the target site's URL and an optional note, then send peace. The other site must also have the Peace Protocol plugin installed and activated.
+Use the peace hand button (✌️) on your site or the `[peaceprotocol_hand_button]` shortcode. Enter the target site's URL and an optional note, then send peace. The other site must also have the Peace Protocol plugin installed and activated.
 
 = What happens when I send peace? =
 Your site is subscribed to the other site's feed, allowing you to follow their updates. The handshake is logged and can be viewed in your admin area. If the other site has the plugin, they'll receive your peace message.
@@ -181,8 +181,8 @@ Your site is subscribed to the other site's feed, allowing you to follow their u
 Yes, you can manage your subscribed feeds from the Peace Protocol settings page in your WordPress admin.
 
 = What shortcodes are available? =
-- `[peace_hand_button]` - Display the peace button
-- `[peace_log_wall]` - Display received peace messages
+- `[peaceprotocol_hand_button]` - Display the peace button
+- `[peaceprotocol_log_wall]` - Display received peace messages
 
 = Is this plugin translation-ready? =
 Yes! All user-facing text is translatable, and translation files for several languages are included (Spanish, French, Japanese, Chinese Simplified).
@@ -206,6 +206,9 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.2.2 =
+* Adjustments to prepare for .org review
 
 = 1.2.1 =
 * **Bug Fix**: Fixed redirect bug in IndieAuth flow when user is already logged in

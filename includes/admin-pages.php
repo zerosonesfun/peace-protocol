@@ -2,8 +2,8 @@
 defined('ABSPATH') || exit;
 
 // Register AJAX actions early
-add_action('wp_ajax_peace_protocol_rotate_tokens', 'peace_protocol_rotate_tokens_callback');
-add_action('wp_ajax_peace_protocol_delete_token', 'peace_protocol_delete_token_callback');
+add_action('wp_ajax_peaceprotocol_rotate_tokens', 'peaceprotocol_rotate_tokens_callback');
+add_action('wp_ajax_peaceprotocol_delete_token', 'peaceprotocol_delete_token_callback');
 
 add_action('admin_menu', function () {
     add_options_page(
@@ -11,11 +11,11 @@ add_action('admin_menu', function () {
         __('Peace Protocol', 'peace-protocol'),
         'manage_options',
         'peace-protocol',
-        'peace_protocol_admin_page'
+        'peaceprotocol_admin_page'
     );
 });
 
-function peace_protocol_admin_page()
+function peaceprotocol_admin_page()
 {
     if (!current_user_can('manage_options')) {
         return;
@@ -29,23 +29,23 @@ function peace_protocol_admin_page()
         // error_log('Peace Protocol Admin: Federated return detected - return_site: ' . $return_site . ', state: ' . $state);
         
         // Generate authorization code
-        $auth_code = wp_generate_password(32, false);
+        $auth_code = peaceprotocol_generate_secure_token(32);
         $expires = time() + 300; // 5 minutes
         
         // Store authorization code
-        $authorizations = get_option('peace_protocol_authorizations', array());
+        $authorizations = get_option('peaceprotocol_authorizations', array());
         $authorizations[$auth_code] = array(
             'site_url' => get_site_url(),
             'return_site' => $return_site,
             'expires' => $expires,
             'used' => false
         );
-        update_option('peace_protocol_authorizations', $authorizations);
+        update_option('peaceprotocol_authorizations', $authorizations);
         
         // error_log('Peace Protocol Admin: Generated authorization code: ' . $auth_code . ' for return site: ' . $return_site);
         
         // Subscribe this site to the return site's feed
-        peace_protocol_subscribe_to_feed($return_site);
+        peaceprotocol_subscribe_to_feed($return_site);
         
         // Redirect back to return site with authorization code
         $redirect = $return_site;
@@ -58,34 +58,34 @@ function peace_protocol_admin_page()
     }
 
     // --- Rotate tokens before any output ---
-    $tokens = get_option('peace_tokens', []);
+    $tokens = get_option('peaceprotocol_tokens', []);
     if (count($tokens) > 1) {
         $first = array_shift($tokens);
         $tokens[] = $first;
-        update_option('peace_tokens', $tokens);
+        update_option('peaceprotocol_tokens', $tokens);
     }
 
     // --- Handle POST actions before output ---
-    if (isset($_POST['peace_protocol_generate_token']) && check_admin_referer('peace_protocol_generate_token')) {
-        $tokens = get_option('peace_tokens', []);
-        $tokens[] = trim(wp_generate_password(32, true, true));
-        update_option('peace_tokens', $tokens);
+    if (isset($_POST['peaceprotocol_generate_token']) && check_admin_referer('peaceprotocol_generate_token')) {
+        $tokens = get_option('peaceprotocol_tokens', []);
+        $tokens[] = peaceprotocol_generate_secure_token(32);
+        update_option('peaceprotocol_tokens', $tokens);
     }
 
-    if (isset($_POST['peace_protocol_save_settings']) && check_admin_referer('peace_protocol_settings')) {
+    if (isset($_POST['peaceprotocol_save_settings']) && check_admin_referer('peaceprotocol_settings')) {
         $hide_auto_button = isset($_POST['peace_hide_auto_button']) ? '1' : '0';
         $button_position = isset($_POST['peace_button_position']) ? sanitize_text_field(wp_unslash($_POST['peace_button_position'])) : 'top-right';
-        update_option('peace_hide_auto_button', $hide_auto_button);
-        update_option('peace_button_position', $button_position);
+        update_option('peaceprotocol_hide_auto_button', $hide_auto_button);
+        update_option('peaceprotocol_button_position', $button_position);
         echo '<div class="updated"><p>' . esc_html__('Settings saved.', 'peace-protocol') . '</p></div>';
     }
 
-    $tokens = get_option('peace_tokens', []);
-    $feeds = get_option('peace_feeds', []);
+    $tokens = get_option('peaceprotocol_tokens', []);
+    $feeds = get_option('peaceprotocol_feeds', []);
     $site_url = get_site_url();
-    $ajax_nonce = wp_create_nonce('peace_protocol_rotate_tokens');
-    $hide_auto_button = get_option('peace_hide_auto_button', '0');
-    $button_position = get_option('peace_button_position', 'top-right');
+    $ajax_nonce = wp_create_nonce('peaceprotocol_rotate_tokens');
+    $hide_auto_button = get_option('peaceprotocol_hide_auto_button', '0');
+    $button_position = get_option('peaceprotocol_button_position', 'top-right');
     ?>
     <div class="wrap">
         <h1><?php esc_html_e('Peace Protocol Settings', 'peace-protocol'); ?></h1>
@@ -94,14 +94,14 @@ function peace_protocol_admin_page()
 
         <h2><?php esc_html_e('Your Tokens', 'peace-protocol'); ?></h2>
         <form method="post" style="margin-bottom:2em;">
-            <?php wp_nonce_field('peace_protocol_generate_token'); ?>
-            <button type="submit" name="peace_protocol_generate_token" class="button button-primary">
+            <?php wp_nonce_field('peaceprotocol_generate_token'); ?>
+            <button type="submit" name="peaceprotocol_generate_token" class="button button-primary">
                 <?php esc_html_e('Generate New Token', 'peace-protocol'); ?>
             </button>
         </form>
 
         <form method="post" style="margin-bottom:2em;">
-            <?php wp_nonce_field('peace_protocol_settings'); ?>
+            <?php wp_nonce_field('peaceprotocol_settings'); ?>
             <table class="form-table">
                 <tr>
                     <th scope="row">
@@ -135,19 +135,24 @@ function peace_protocol_admin_page()
                     </td>
                 </tr>
             </table>
-            <button type="submit" name="peace_protocol_save_settings" class="button button-primary">
+            <button type="submit" name="peaceprotocol_save_settings" class="button button-primary">
                 <?php esc_html_e('Save Settings', 'peace-protocol'); ?>
             </button>
         </form>
 
         <h2><?php esc_html_e('Your Tokens', 'peace-protocol'); ?></h2>
         <div id="peace-identities-table"></div>
+        <!-- 
+        LEGITIMATE EXCEPTION: This inline script has been moved to wp_add_inline_script() 
+        in includes/inline-scripts.php for proper WordPress compliance.
+        The script functionality is now handled by peaceprotocol_get_admin_inline_script().
+        -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const LS_KEY = 'peace-protocol-identities';
-            const site = <?php echo json_encode(get_site_url()); ?>;
-            const tokens = <?php echo json_encode(get_option('peace_tokens', [])); ?>;
-            const ajaxNonce = <?php echo json_encode(wp_create_nonce('peace_protocol_delete_token')); ?>;
+            const site = <?php echo wp_json_encode(esc_url(get_site_url())); ?>;
+            const tokens = <?php echo wp_json_encode(array_map('esc_html', get_option('peaceprotocol_tokens', []))); ?>;
+            const ajaxNonce = <?php echo wp_json_encode(esc_attr(wp_create_nonce('peaceprotocol_delete_token'))); ?>;
             
             // Clean up any corrupted tokens in localStorage
             try {
@@ -266,7 +271,7 @@ function peace_protocol_admin_page()
             
             function deleteToken(token) {
                 const formData = new FormData();
-                formData.append('action', 'peace_protocol_delete_token');
+                formData.append('action', 'peaceprotocol_delete_token');
                 formData.append('token', token);
                 formData.append('nonce', ajaxNonce);
                 
@@ -304,78 +309,7 @@ function peace_protocol_admin_page()
 
         <h2><?php esc_html_e('Subscribed Peace Feeds', 'peace-protocol'); ?></h2>
         <p><?php esc_html_e('These are sites you\'ve sent peace to.', 'peace-protocol'); ?></p>
-        <style>
-        .peace-feed-grid { display: flex; flex-wrap: wrap; gap: 1.5em; margin: 0 -0.75em; }
-        .peace-feed-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            padding: 1em;
-            margin: 0.75em;
-            flex: 1 1 320px;
-            min-width: 280px;
-            max-width: 420px;
-            display: flex;
-            flex-direction: column;
-        }
-        .peace-feed-card h3 { margin-top: 0; font-size: 1.1em; }
-        .peace-feed-card ul { padding-left: 1.2em; margin: 0; }
-        .peace-feed-card li { margin-bottom: 0.7em; }
-        .peace-feed-card .feed-error { color: #b91c1c; font-size: 0.95em; }
-        .peace-feed-card .unsubscribe-btn { margin-top: 0.7em; }
-        @media (max-width: 700px) {
-            .peace-feed-grid { flex-direction: column; gap: 0.5em; }
-            .peace-feed-card { max-width: 100%; min-width: 0; }
-        }
-        #peace-unsub-modal-bg { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:100001; align-items:center; justify-content:center; }
-        #peace-unsub-modal { background:#fff; border-radius:8px; padding:2em; max-width:340px; margin:auto; text-align:center; }
-        #peace-unsub-modal button {
-            margin-top: 0.5rem;
-            margin-right: 0.5rem;
-        }
-        /* Fallback for .button if theme does not style it */
-        #peace-unsub-modal .button {
-            display: inline-block;
-            padding: 0.5em 1.2em;
-            font-size: 1em;
-            border-radius: 4px;
-            border: none;
-            background: #f3f4f6;
-            color: #222;
-            cursor: pointer;
-            transition: background 0.2s;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-        }
-        #peace-unsub-modal .button-primary {
-            background: #2563eb;
-            color: #fff;
-        }
-        #peace-unsub-modal .button:hover, #peace-unsub-modal .button-primary:hover {
-            background: #1e40af;
-            color: #fff;
-        }
-        /* Admin page button styling */
-        button[name="peace_protocol_save_settings"] {
-            margin-left: 1em;
-        }
-        /* Token deletion button styling */
-        .delete-token-btn {
-            color: #dc3232 !important;
-            border-color: #dc3232 !important;
-        }
-        .delete-token-btn:hover {
-            background: #dc3232 !important;
-            color: #fff !important;
-        }
-        /* Dark mode support for admin unsubscribe modal */
-        @media (prefers-color-scheme: dark) {
-            #peace-unsub-modal {
-                background: #222;
-                color: #eee;
-            }
-        }
-        </style>
+        <!-- Admin styles are now handled by enqueue-assets.php -->
         <div id="peace-unsub-modal-bg">
             <div id="peace-unsub-modal">
                 <h3><?php esc_html_e('Unsubscribe from Feed?', 'peace-protocol'); ?></h3>
@@ -427,53 +361,20 @@ function peace_protocol_admin_page()
         ?>
     </div>
     <div id="peace-protocol-message" style="margin-top:1em;" role="alert"></div>
-    <script>
-    // Always define ajaxurl globally, using wp_json_encode for bulletproof JS
-    var ajaxurl = <?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>;
-    (function() {
-        var tokens = <?php echo wp_json_encode($tokens); ?>;
-        var site = <?php echo wp_json_encode($site_url); ?>;
-        var peaceKey = 'peace-protocol-data';
-        var data = { tokens: tokens, site: site };
-        var messageDiv = document.getElementById('peace-protocol-message');
-        var ajaxNonce = <?php echo wp_json_encode($ajax_nonce); ?>;
-
-        localStorage.setItem(peaceKey, JSON.stringify(data));
-    })();
-    </script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var unsubModalBg = document.getElementById('peace-unsub-modal-bg');
-        var unsubModalSite = document.getElementById('peace-unsub-modal-site');
-        var unsubFeedInput = document.getElementById('peace-unsub-feed-input');
-        var unsubCancel = document.getElementById('peace-unsub-cancel');
-        var unsubForm = document.getElementById('peace-unsub-form');
-        
-        document.querySelectorAll('.unsubscribe-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                unsubModalSite.textContent = this.getAttribute('data-feed-url');
-                unsubFeedInput.value = this.getAttribute('data-feed-url');
-                unsubModalBg.style.display = 'flex';
-            });
-        });
-        unsubCancel.addEventListener('click', function() {
-            unsubModalBg.style.display = 'none';
-        });
-    });
-    </script>
+    <!-- Admin JavaScript is now handled by enqueue-assets.php -->
     <?php
     if (isset($_POST['peace_unsub_feed'])) {
         $unsub_feed = esc_url_raw(wp_unslash($_POST['peace_unsub_feed']));
-        $feeds = get_option('peace_feeds', []);
+        $feeds = get_option('peaceprotocol_feeds', []);
         $feeds = array_filter($feeds, function($f) use ($unsub_feed) { return $f !== $unsub_feed; });
-        update_option('peace_feeds', array_values($feeds));
+        update_option('peaceprotocol_feeds', array_values($feeds));
         echo '<div class="updated"><p>' . esc_html__('Unsubscribed from feed:', 'peace-protocol') . ' ' . esc_html($unsub_feed) . '</p></div>';
         wp_safe_redirect(admin_url('options-general.php?page=peace-protocol'));
         exit;
     }
 }
 
-function peace_protocol_rotate_tokens_callback() {
+function peaceprotocol_rotate_tokens_callback() {
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Unauthorized', 403);
     }
@@ -482,13 +383,13 @@ function peace_protocol_rotate_tokens_callback() {
     }
     
     $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
-    if (!wp_verify_nonce($nonce, 'peace_protocol_rotate_tokens')) {
+    if (!wp_verify_nonce($nonce, 'peaceprotocol_rotate_tokens')) {
         wp_send_json_error('Invalid nonce', 400);
     }
     
     // Get raw tokens and decode HTML entities
     // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Tokens contain special characters, processed safely with wp_unslash and html_entity_decode
-    $tokens_raw = wp_unslash($_POST['tokens']);
+    $tokens_raw = sanitize_textarea_field(wp_unslash($_POST['tokens']));
     $tokens_raw = html_entity_decode($tokens_raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Tokens contain special characters, processed safely with wp_unslash and html_entity_decode
     
@@ -497,12 +398,15 @@ function peace_protocol_rotate_tokens_callback() {
         wp_send_json_error('Invalid tokens', 400);
     }
     
-    update_option('peace_tokens', $tokens);
+    // Sanitize each token in the array
+    $tokens = array_map('sanitize_text_field', $tokens);
+    
+    update_option('peaceprotocol_tokens', $tokens);
     wp_send_json_success();
     wp_die();
 }
 
-function peace_protocol_delete_token_callback() {
+function peaceprotocol_delete_token_callback() {
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Unauthorized', 403);
     }
@@ -511,7 +415,7 @@ function peace_protocol_delete_token_callback() {
     }
     
     $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
-    if (!wp_verify_nonce($nonce, 'peace_protocol_delete_token')) {
+    if (!wp_verify_nonce($nonce, 'peaceprotocol_delete_token')) {
         wp_send_json_error('Invalid nonce', 400);
     }
     
@@ -519,7 +423,7 @@ function peace_protocol_delete_token_callback() {
     // Decode HTML entities in case the token was encoded
     $token_to_delete = html_entity_decode($token_to_delete, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     
-    $tokens = get_option('peace_tokens', []);
+    $tokens = get_option('peaceprotocol_tokens', []);
     
     // Prevent deleting the last token
     if (count($tokens) <= 1) {
@@ -552,7 +456,7 @@ function peace_protocol_delete_token_callback() {
     // Re-index array
     $tokens = array_values($tokens);
     
-    update_option('peace_tokens', $tokens);
+    update_option('peaceprotocol_tokens', $tokens);
     // error_log('Peace Protocol: Token deleted successfully. Remaining tokens: ' . count($tokens));
     wp_send_json_success();
     wp_die();

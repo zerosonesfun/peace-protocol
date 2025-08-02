@@ -1,0 +1,184 @@
+/* Peace Protocol Ban Users Styles */
+
+/* Ban Modal */
+#peace-ban-modal-bg {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100001;
+    align-items: center;
+    justify-content: center;
+}
+
+#peace-ban-modal {
+    background: #fff;
+    border-radius: 8px;
+    padding: 2em;
+    max-width: 400px;
+    margin: auto;
+    text-align: center;
+}
+
+#peace-ban-modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #dc3232;
+}
+
+#peace-ban-modal p {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+#peace-ban-modal textarea {
+    width: 100%;
+    height: 100px;
+    margin-bottom: 1rem;
+    resize: vertical;
+}
+
+.peace-ban-reason-container {
+    margin: 1em 0;
+}
+
+.peace-ban-reason-container label {
+    display: block;
+    text-align: left;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+.peace-ban-reason-container textarea {
+    width: 100%;
+    padding: 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+#peace-ban-modal button {
+    margin: 0.5rem;
+}
+
+/* Ban/Unban Buttons */
+.peace-ban-user,
+.peace-unban-user {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0.25rem;
+}
+
+.peace-ban-user {
+    background: #dc3232;
+    color: #fff;
+    border: 1px solid #dc3232;
+}
+
+.peace-ban-user:hover {
+    background: #a00;
+    border-color: #a00;
+    color: #fff;
+}
+
+.peace-unban-user {
+    background: #46b450;
+    color: #fff;
+    border: 1px solid #46b450;
+}
+
+.peace-unban-user:hover {
+    background: #389a43;
+    border-color: #389a43;
+    color: #fff;
+}
+
+/* User List */
+.peace-user-list {
+    margin: 1em 0;
+}
+
+.peace-user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    background: #fff;
+}
+
+.peace-user-info {
+    flex: 1;
+}
+
+.peace-user-name {
+    font-weight: bold;
+    color: #374151;
+}
+
+.peace-user-email {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.peace-user-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Banned User Status */
+.peace-user-banned {
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.peace-user-banned .peace-user-name {
+    color: #991b1b;
+}
+
+.peace-user-banned .peace-user-email {
+    color: #b91c1c;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    #peace-ban-modal {
+        background: #222;
+        color: #eee;
+    }
+    
+    .peace-user-item {
+        background: #222;
+        border-color: #374151;
+    }
+    
+    .peace-user-name {
+        color: #e5e7eb;
+    }
+    
+    .peace-user-email {
+        color: #9ca3af;
+    }
+    
+    .peace-user-banned {
+        background: #3d1e1e;
+        border-color: #7f1d1d;
+    }
+    
+    .peace-user-banned .peace-user-name {
+        color: #fca5a5;
+    }
+    
+    .peace-user-banned .peace-user-email {
+        color: #f87171;
+    }
+} 

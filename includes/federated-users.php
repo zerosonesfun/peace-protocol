@@ -94,7 +94,7 @@ add_action('after_setup_theme', function() {
 });
 
 // Create or get federated user for a site
-function peace_protocol_get_or_create_federated_user($site_url) {
+function peaceprotocol_get_or_create_federated_user($site_url) {
     // error_log('Peace Protocol: get_or_create_federated_user called with site_url: ' . $site_url);
     
     // Parse domain from site URL
@@ -149,11 +149,11 @@ function peace_protocol_get_or_create_federated_user($site_url) {
 }
 
 // Log in federated user
-function peace_protocol_login_federated_user($site_url) {
+function peaceprotocol_login_federated_user($site_url) {
     // error_log('Peace Protocol: login_federated_user called with site_url: ' . $site_url);
     
     // Get or create federated user
-    $user = peace_protocol_get_or_create_federated_user($site_url);
+    $user = peaceprotocol_get_or_create_federated_user($site_url);
     
     if (!$user) {
         // error_log('Peace Protocol: Failed to get or create federated user for site: ' . $site_url);
@@ -172,11 +172,11 @@ function peace_protocol_login_federated_user($site_url) {
 }
 
 // Handle federated authorization code return
-function peace_protocol_handle_federated_auth_return($auth_code, $federated_site, $state) {
+function peaceprotocol_handle_federated_auth_return($auth_code, $federated_site, $state) {
     // error_log('Peace Protocol: Handling federated auth return - code: ' . $auth_code . ', site: ' . $federated_site . ', state: ' . $state);
     
     // Get all authorizations
-    $authorizations = get_option('peace_protocol_authorizations', array());
+    $authorizations = get_option('peaceprotocol_authorizations', array());
     // error_log('Peace Protocol: All authorizations: ' . print_r($authorizations, true));
     
     // Check if authorization code exists
@@ -194,7 +194,7 @@ function peace_protocol_handle_federated_auth_return($auth_code, $federated_site
         // error_log('Peace Protocol: Authorization code expired: ' . $auth_code . ' (expires: ' . $auth_data['expires'] . ', current time: ' . time() . ')');
         // Remove expired authorization
         unset($authorizations[$auth_code]);
-        update_option('peace_protocol_authorizations', $authorizations);
+        update_option('peaceprotocol_authorizations', $authorizations);
         return false;
     }
     
@@ -206,14 +206,14 @@ function peace_protocol_handle_federated_auth_return($auth_code, $federated_site
     
     // Mark authorization code as used
     $authorizations[$auth_code]['used'] = true;
-    update_option('peace_protocol_authorizations', $authorizations);
+    update_option('peaceprotocol_authorizations', $authorizations);
     // error_log('Peace Protocol: Authorization code is valid, marking as used');
     
     // Get the federated site URL from the authorization data
     $federated_site = $auth_data['site_url'];
     
     // Create and log in federated user
-    $user = peace_protocol_login_federated_user($federated_site);
+    $user = peaceprotocol_login_federated_user($federated_site);
     
     if ($user) {
         // error_log('Peace Protocol: Creating federated user representing site: ' . $federated_site);

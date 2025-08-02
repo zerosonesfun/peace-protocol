@@ -2,8 +2,6 @@
 
 **A secure, decentralized protocol for WordPress administrators to connect their sites and build a network of trust through cryptographic handshakes.**
 
-**Now integrated with IndieAuth!**
-
 Peace Protocol enables WordPress site administrators to authenticate as their website and send cryptographically signed "peace" messages to other WordPress sites running the same protocol. This creates a decentralized network where admins can establish trust relationships, share peace, and enable cross-site interactions.
 
 ## 🔒 **Security-First Design**
@@ -30,7 +28,7 @@ Peace Protocol enables WordPress site administrators to authenticate as their we
 
 ### **Core Functionality**
 - **Send Peace**: Send cryptographically signed peace messages to other WordPress sites
-- **Peace Log Wall**: Display received peace messages using the `[peace_log_wall]` shortcode
+- **Peace Log Wall**: Display received peace messages using the `[peaceprotocol_log_wall]` shortcode
 - **Automatic Feed Subscription**: Automatically subscribe to peace feeds from sites you connect with
 - **Token Management**: Generate, rotate, and manage authentication tokens
 - **User Banning System**: Ban problematic users with reason tracking
@@ -53,7 +51,7 @@ Peace Protocol enables WordPress site administrators to authenticate as their we
 ### **Frontend Features**
 - **Peace Button**: Floating peace hand button (✌️) that can be positioned anywhere
 - **Auto-Insertion**: Automatically insert the peace button on your site
-- **Shortcode Support**: Use `[peace_hand_button]` to manually place the button
+- **Shortcode Support**: Use `[peaceprotocol_hand_button]` to manually place the button
 - **Responsive Design**: Works on all devices and screen sizes
 - **Dark Mode Support**: Automatically adapts to user's color scheme preference
 - **Choice Modal**: User-friendly modal to choose between Peace Protocol and IndieAuth authentication
@@ -128,8 +126,8 @@ Peace Protocol enables WordPress site administrators to authenticate as their we
 ### **Basic Setup**
 ```php
 // The peace button is automatically inserted on your site
-// Or use the shortcode: [peace_hand_button]
-// Display peace log wall: [peace_log_wall]
+// Or use the shortcode: [peaceprotocol_hand_button]
+// Display peace log wall: [peaceprotocol_log_wall]
 ```
 
 ### **Token Management**

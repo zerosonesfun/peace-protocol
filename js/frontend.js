@@ -55,15 +55,16 @@
     // Helper function to refresh IndieAuth tokens if needed
     async function refreshIndieAuthTokenIfNeeded(userId) {
         try {
-            const response = await fetch('/wp-admin/admin-ajax.php', {
+            const ajaxurl = (typeof window.peaceprotocolData !== 'undefined' && window.peaceprotocolData.ajaxurl) ? window.peaceprotocolData.ajaxurl : (typeof window.ajaxurl !== 'undefined' ? window.ajaxurl : '/wp-admin/admin-ajax.php');
+            const response = await fetch(ajaxurl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    action: 'peace_protocol_refresh_indieauth_token',
+                    action: 'peaceprotocol_refresh_indieauth_token',
                     user_id: userId,
-                    _wpnonce: window.peaceData?.nonce || ''
+                    _wpnonce: window.peaceprotocolData?.nonce || ''
                 })
             });
             
@@ -204,7 +205,7 @@
         }
         
         // Handle IndieAuth callback
-        if (indieAuthAction === 'peace_protocol_indieauth_callback' && indieAuthCode && indieAuthState) {
+                    if (indieAuthAction === 'peaceprotocol_indieauth_callback' && indieAuthCode && indieAuthState) {
             // console.log('[Peace Protocol] IndieAuth callback detected, processing...');
             
             // The IndieAuth callback is handled by the shortcodes.php JavaScript

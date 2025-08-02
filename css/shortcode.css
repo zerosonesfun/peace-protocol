@@ -1,0 +1,25 @@
+/* Peace Protocol Shortcode Styles */
+
+.peace-log-wall {
+    padding-left: 1.3em;
+    max-width: 600px;
+    margin: 1.5em auto;
+    list-style: disc;
+}
+
+.peace-log-wall li {
+    margin-bottom: 1.1em;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.peace-log-wall strong {
+    color: #2563eb;
+}
+
+@media (max-width: 600px) {
+    .peace-log-wall {
+        padding-left: 1em;
+        max-width: 98vw;
+    }
+} 

@@ -1,16 +1,16 @@
 <?php
 defined('ABSPATH') || exit;
 
-add_shortcode('peace_log_wall', function () {
+add_shortcode('peaceprotocol_log_wall', function () {
     $logs = get_posts([
-        'post_type' => 'peace_log',
+        'post_type' => 'peaceprotocol_log',
         'posts_per_page' => 10,
         'post_status' => 'publish'
     ]);
 
     if (!$logs) return '<p>No peace logs yet.</p>';
 
-    $output = '<style>.peace-log-wall{padding-left:1.3em;max-width:600px;margin:1.5em auto;list-style:disc;}.peace-log-wall li{margin-bottom:1.1em;line-height:1.5;word-break:break-word;}.peace-log-wall strong{color:#2563eb;}@media(max-width:600px){.peace-log-wall{padding-left:1em;max-width:98vw;}}</style>';
+    $output = '';
     $output .= '<ul class="peace-log-wall">';
     foreach ($logs as $log) {
         $from = get_post_meta($log->ID, 'from_site', true);
@@ -22,10 +22,10 @@ add_shortcode('peace_log_wall', function () {
 });
 
 // Reusable function for peace hand button/modal markup
-if (!function_exists('peace_protocol_render_hand_button')) {
-    function peace_protocol_render_hand_button() {
+if (!function_exists('peaceprotocol_render_hand_button')) {
+    function peaceprotocol_render_hand_button() {
         // Get the button position setting
-        $button_position = get_option('peace_button_position', 'top-right');
+        $button_position = get_option('peaceprotocol_button_position', 'top-right');
         
         // Generate CSS based on position
         $position_css = '';
@@ -45,179 +45,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 break;
         }
         
-        // Since output buffering is already active, let's just output directly
+        // Styles are now handled by enqueue-assets.php
         ?>
-        <style>
-            #peace-protocol-button {
-                position: fixed;
-                <?php echo esc_html($position_css); ?>
-                background: transparent;
-                border: none;
-                font-size: 2rem;
-                cursor: pointer;
-                z-index: 99999;
-            }
-            body.admin-bar #peace-protocol-button {
-                <?php 
-                if (strpos($button_position, 'top') === 0) {
-                    echo 'top: 3rem;';
-                }
-                ?>
-            }
-            #peace-modal {
-                display: none;
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.75);
-                z-index: 100000;
-                align-items: center;
-                justify-content: center;
-            }
-            #peace-modal-content {
-                background: #fff;
-                max-width: 400px;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                color: #333;
-            }
-            @media (prefers-color-scheme: dark) {
-                #peace-modal-content {
-                    background: #222;
-                    color: #eee;
-                }
-            }
-            #peace-modal textarea {
-                width: 100%;
-                max-width: 100%;
-                height: 3rem;
-                margin-top: 0.5rem;
-                resize: none;
-            }
-            #peace-modal button {
-                margin-top: 0.5rem;
-                margin-right: 0.5rem;
-            }
-            /* Fallback for .button if theme does not style it */
-            #peace-modal .button {
-                display: inline-block;
-                padding: 0.5em 1.2em;
-                font-size: 1em;
-                border-radius: 4px;
-                border: none;
-                background: #f3f4f6;
-                color: #222;
-                cursor: pointer;
-                transition: background 0.2s;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            }
-            #peace-modal .button-primary {
-                background: #2563eb;
-                color: #fff;
-            }
-            #peace-modal .button:hover, #peace-modal .button-primary:hover {
-                background: #1e40af;
-                color: #fff;
-            }
-            #peace-success-modal {
-                display: none;
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.75);
-                z-index: 100000;
-                align-items: center;
-                justify-content: center;
-            }
-            #peace-success-modal button {
-                margin-top: 0.5rem;
-                margin-right: 0.5rem;
-            }
-            /* Fallback for .button if theme does not style it - for success modal */
-            #peace-success-modal .button {
-                display: inline-block;
-                padding: 0.5em 1.2em;
-                font-size: 1em;
-                border-radius: 4px;
-                border: none;
-                background: #f3f4f6;
-                color: #222;
-                cursor: pointer;
-                transition: background 0.2s;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            }
-            #peace-success-modal .button-primary {
-                background: #2563eb;
-                color: #fff;
-            }
-            #peace-success-modal .button:hover, #peace-success-modal .button-primary:hover {
-                background: #1e40af;
-                color: #fff;
-            }
-            #peace-redirect-modal button {
-                margin-top: 1rem;
-            }
-            /* Fallback for .button if theme does not style it - for redirect modal */
-            #peace-redirect-modal .button {
-                display: inline-block;
-                padding: 0.5em 1.2em;
-                font-size: 1em;
-                border-radius: 4px;
-                border: none;
-                background: #f3f4f6;
-                color: #222;
-                cursor: pointer;
-                transition: background 0.2s;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            }
-            #peace-redirect-modal .button-primary {
-                background: #2563eb;
-                color: #fff;
-            }
-            #peace-redirect-modal .button:hover, #peace-redirect-modal .button-primary:hover {
-                background: #1e40af;
-                color: #fff;
-            }
-            /* Fallback for .button if theme does not style it - for federated modal */
-            #peace-federated-modal .button {
-                display: inline-block;
-                padding: 0.5em 1.2em;
-                font-size: 1em;
-                border-radius: 4px;
-                border: none;
-                background: #f3f4f6;
-                color: #222;
-                cursor: pointer;
-                transition: background 0.2s;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            }
-            #peace-federated-modal .button-primary {
-                background: #2563eb;
-                color: #fff;
-            }
-            #peace-federated-modal .button:hover, #peace-federated-modal .button-primary:hover {
-                background: #1e40af;
-                color: #fff;
-            }
-            /* Default styling for federated modal content */
-            #peace-federated-modal-content {
-                background: #fff;
-                color: #333;
-            }
-            /* Dark mode support for federated modal */
-            @media (prefers-color-scheme: dark) {
-                #peace-federated-modal-content {
-                    background: #222;
-                    color: #eee;
-                }
-            }
-            /* Dark mode support for redirect modal */
-            @media (prefers-color-scheme: dark) {
-                #peace-redirect-modal-content {
-                    background: #222;
-                    color: #eee;
-                }
-            }
-        </style>
-        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>" style="position: fixed; <?php echo esc_html($position_css); ?> background: transparent; border: none; font-size: 2rem; cursor: pointer; z-index: 99999;">✌️</button>
+        <button id="peace-protocol-button" title="<?php esc_attr_e('Give Peace ✌️', 'peace-protocol'); ?>">✌️</button>
         <?php
         echo '<!-- Peace Protocol: Button HTML output -->';
         ?>
@@ -226,9 +56,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 <h2 id="peace-modal-title"><?php esc_html_e('Give Peace?', 'peace-protocol'); ?></h2>
                 <p id="peace-modal-question"><?php esc_html_e('Do you want to give peace to this site?', 'peace-protocol'); ?></p>
                 <textarea id="peace-note" maxlength="50" placeholder="<?php esc_attr_e('Optional note (max 50 characters)', 'peace-protocol'); ?>"></textarea>
-                <div id="peace-note-counter" style="font-size:0.95em;color:#666;text-align:right;margin-bottom:0.3em;">0/50</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5em;flex-wrap:wrap;">
-                    <div id="peace-sending-as" style="font-size:0.95em;color:#666;flex:1 1 100%;margin-bottom:0.2em;text-align:left;"></div>
+                <div id="peace-note-counter">0/50</div>
+                <div class="peace-modal-actions">
+                    <div id="peace-sending-as"></div>
                     <button id="peace-send" class="button button-primary"><?php esc_html_e('Send Peace', 'peace-protocol'); ?></button>
                     <button id="peace-cancel" class="button"><?php esc_html_e('Cancel', 'peace-protocol'); ?></button>
                 </div>
@@ -433,10 +263,15 @@ if (!function_exists('peace_protocol_render_hand_button')) {
         <?php
         echo '<!-- Peace Protocol: Redirect modal HTML output -->';
         ?>
+        <!-- 
+        LEGITIMATE EXCEPTION: This inline script has been moved to wp_add_inline_script() 
+        in includes/inline-scripts.php for proper WordPress compliance.
+        The script functionality is now handled by peaceprotocol_get_shortcode_inline_script().
+        -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Define ajaxurl for AJAX fallbacks
-            const ajaxurl = (typeof peaceData !== 'undefined' && peaceData.ajaxurl) ? peaceData.ajaxurl : '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+            const ajaxurl = (typeof peaceprotocolData !== 'undefined' && peaceprotocolData.ajaxurl) ? peaceprotocolData.ajaxurl : '<?php echo esc_js(peaceprotocol_get_admin_ajax_url()); ?>';
             
             const btn = document.getElementById('peace-protocol-button');
             const modal = document.getElementById('peace-modal');
@@ -451,7 +286,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
 
             const getIdentities = window.peaceProtocolGetIdentities || function() { return []; };
             let selectedIdentity = null;
-            const canonicalSiteUrl = (typeof peaceData !== 'undefined' && peaceData.siteUrl) ? peaceData.siteUrl : window.location.origin;
+            const canonicalSiteUrl = (typeof peaceprotocolData !== 'undefined' && peaceprotocolData.siteUrl) ? peaceprotocolData.siteUrl : window.location.origin;
 
             function refreshIdentities() {
                 const identities = getIdentities();
@@ -563,7 +398,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     } catch (err) {
                         // Fall back to AJAX
                         const formData = new FormData();
-                        formData.append('action', 'peace_protocol_send_peace');
+                        formData.append('action', 'peaceprotocol_send_peace');
                         formData.append('target_site', window.location.origin);
                         formData.append('message', note);
                         formData.append('authorization_code', auth.code);
@@ -889,7 +724,7 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                     
                     // Log the values server-side for debugging
                     const formData = new FormData();
-                    formData.append('action', 'peace_protocol_debug_log');
+                    formData.append('action', 'peaceprotocol_debug_log');
                     formData.append('message', 'IndieAuth: Setting me parameter to: ' + domain + ', authUrl: ' + authUrl.toString());
                     fetch(ajaxurl, {
                         method: 'POST',
@@ -948,9 +783,9 @@ if (!function_exists('peace_protocol_render_hand_button')) {
                 console.log('IndieAuth discovery: Starting server-side discovery for URL:', url);
                 
                 const formData = new FormData();
-                formData.append('action', 'peace_protocol_discover_indieauth');
+                formData.append('action', 'peaceprotocol_discover_indieauth');
                 formData.append('url', url);
-                formData.append('_wpnonce', '<?php echo wp_create_nonce("peace_protocol_indieauth"); ?>');
+                formData.append('_wpnonce', '<?php echo esc_attr(wp_create_nonce("peaceprotocol_indieauth")); ?>');
                 
                 const response = await fetch(ajaxurl, {
                   method: 'POST',
@@ -1145,6 +980,6 @@ if (!function_exists('peace_protocol_render_hand_button')) {
 }
 
 // Add peace hand button shortcode
-add_shortcode('peace_hand_button', function () {
-    return peace_protocol_render_hand_button();
+add_shortcode('peaceprotocol_hand_button', function () {
+    return peaceprotocol_render_hand_button();
 });

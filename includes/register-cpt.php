@@ -18,7 +18,7 @@ add_action('init', function () {
         'not_found_in_trash' => __('No peace logs found in Trash.', 'peace-protocol'),
     ];
 
-    register_post_type('peace_log', [
+    register_post_type('peaceprotocol_log', [
         'labels' => $labels,
         'public' => false,
         'show_ui' => true,
@@ -32,12 +32,12 @@ add_action('init', function () {
     ]);
 });
 
-// Add custom column to peace_log CPT admin table for the optional message (note)
-add_filter('manage_peace_log_posts_columns', function($columns) {
+// Add custom column to peaceprotocol_log CPT admin table for the optional message (note)
+add_filter('manage_peaceprotocol_log_posts_columns', function($columns) {
     $columns['note'] = __('Message', 'peace-protocol');
     return $columns;
 });
-add_action('manage_peace_log_posts_custom_column', function($column, $post_id) {
+add_action('manage_peaceprotocol_log_posts_custom_column', function($column, $post_id) {
     if ($column === 'note') {
         $note = get_post_meta($post_id, 'note', true);
         echo esc_html($note);

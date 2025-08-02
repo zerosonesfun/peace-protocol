@@ -1,0 +1,264 @@
+/* Peace Protocol Authentication Pages Styles */
+
+/* Common styles for all auth pages */
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    max-width: 600px; 
+    margin: 50px auto; 
+    padding: 20px; 
+    line-height: 1.6; 
+}
+
+.container { 
+    background: #f9f9f9; 
+    border-radius: 8px; 
+    padding: 30px; 
+    text-align: center; 
+}
+
+.login-link, .complete-link { 
+    display: inline-block; 
+    background: #0073aa; 
+    color: white; 
+    padding: 12px 24px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin: 20px 0; 
+    font-weight: bold; 
+}
+
+.login-link:hover, .complete-link:hover { 
+    background: #005a87; 
+}
+
+.info { 
+    background: #e7f3ff; 
+    padding: 15px; 
+    border-radius: 4px; 
+    margin: 20px 0; 
+}
+
+/* New Peace Protocol Auth Container Styles */
+.peace-protocol-auth-container { 
+    max-width: 600px; 
+    margin: 50px auto; 
+    padding: 40px; 
+    background: #f9f9f9; 
+    border-radius: 8px; 
+    text-align: center; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.peace-protocol-auth-container h2 { 
+    font-size: 28px; 
+    margin-bottom: 20px; 
+    color: #333; 
+}
+
+.peace-protocol-auth-container h3 { 
+    font-size: 20px; 
+    margin-bottom: 15px; 
+    color: #333; 
+}
+
+.peace-protocol-auth-container p { 
+    font-size: 16px; 
+    margin-bottom: 15px; 
+}
+
+.peace-protocol-info { 
+    background: #e7f3ff; 
+    padding: 20px; 
+    border-radius: 6px; 
+    margin: 20px 0; 
+    font-size: 16px;
+}
+
+.peace-protocol-client-info { 
+    background: #fff3cd; 
+    padding: 20px; 
+    border-radius: 6px; 
+    margin: 20px 0; 
+    font-size: 16px;
+    text-align: left;
+}
+
+.peace-protocol-login-link { 
+    display: inline-block; 
+    background: #0073aa; 
+    color: white; 
+    padding: 15px 30px; 
+    text-decoration: none; 
+    border-radius: 6px; 
+    margin: 20px 0; 
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.peace-protocol-login-link:hover { 
+    background: #005a87; 
+}
+
+.peace-protocol-approve-btn { 
+    display: inline-block; 
+    background: #0073aa; 
+    color: white; 
+    padding: 15px 30px; 
+    text-decoration: none; 
+    border-radius: 6px; 
+    margin: 10px; 
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.peace-protocol-approve-btn:hover { 
+    background: #005a87; 
+}
+
+.peace-protocol-deny-btn { 
+    display: inline-block; 
+    background: #dc3232; 
+    color: white; 
+    padding: 15px 30px; 
+    text-decoration: none; 
+    border-radius: 6px; 
+    margin: 10px; 
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.peace-protocol-deny-btn:hover { 
+    background: #a00; 
+}
+
+.peace-protocol-standalone-page {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.peace-protocol-error { 
+    color: #d63638; 
+    background: #fef7f1; 
+    padding: 20px; 
+    border-radius: 6px; 
+    margin: 20px 0; 
+    font-size: 16px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body { 
+        background: #1a1a1a; 
+        color: #eee; 
+    }
+    .container { 
+        background: #222; 
+        color: #eee; 
+    }
+    .info { 
+        background: #1e3a5f; 
+        color: #dbeafe; 
+    }
+    
+    /* Dark mode for new Peace Protocol classes */
+    .peace-protocol-auth-container { 
+        background: #222; 
+        color: #eee; 
+    } 
+    .peace-protocol-auth-container h2,
+    .peace-protocol-auth-container h3 {
+        color: #fff;
+    }
+    .peace-protocol-info { 
+        background: #1e3a5f; 
+        color: #dbeafe; 
+    } 
+    .peace-protocol-client-info { 
+        background: #3d2c1e; 
+        color: #f4d03f; 
+    } 
+    .peace-protocol-error { 
+        background: #2d1b1b; 
+        color: #fca5a5; 
+    } 
+}
+
+/* IndieAuth specific styles */
+.approve-btn { 
+    display: inline-block; 
+    background: #0073aa; 
+    color: white; 
+    padding: 12px 24px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin: 10px; 
+    font-weight: bold; 
+}
+
+.approve-btn:hover { 
+    background: #005a87; 
+}
+
+.deny-btn { 
+    display: inline-block; 
+    background: #dc3232; 
+    color: white; 
+    padding: 12px 24px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin: 10px; 
+    font-weight: bold; 
+}
+
+.deny-btn:hover { 
+    background: #a00; 
+}
+
+.client-info { 
+    background: #fff3cd; 
+    padding: 15px; 
+    border-radius: 4px; 
+    margin: 20px 0; 
+    text-align: left; 
+}
+
+/* Dark mode for IndieAuth */
+@media (prefers-color-scheme: dark) {
+    .client-info { 
+        background: #3d2c1e; 
+        color: #f4d03f; 
+    }
+}
+
+/* Banned user page styles */
+.banned-message { 
+    max-width: 600px; 
+    padding: 2rem; 
+    line-height: 1.6;
+}
+
+.banned-message h1 { 
+    color: #ff0000; 
+    margin-bottom: 1rem;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.banned-message p { 
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.banned-reason { 
+    background: #333; 
+    padding: 1rem; 
+    border-radius: 4px; 
+    margin-top: 1rem;
+    border-left: 4px solid #ff0000;
+} 

@@ -1,0 +1,393 @@
+/* Peace Protocol Frontend Styles */
+
+/* Modal Styles */
+#peace-modal {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100000;
+    align-items: center;
+    justify-content: center;
+}
+
+#peace-modal-content {
+    background: #fff;
+    max-width: 400px;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    color: #333;
+}
+
+@media (prefers-color-scheme: dark) {
+    #peace-modal-content {
+        background: #222;
+        color: #eee;
+    }
+}
+
+#peace-modal textarea {
+    width: 100%;
+    max-width: 100%;
+    height: 3rem;
+    margin-top: 0.5rem;
+    resize: none;
+}
+
+#peace-modal button {
+    margin-top: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+/* Fallback for .button if theme does not style it */
+#peace-modal .button {
+    display: inline-block;
+    padding: 0.5em 1.2em;
+    font-size: 1em;
+    border-radius: 4px;
+    border: none;
+    background: #f3f4f6;
+    color: #222;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+#peace-modal .button-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+#peace-modal .button:hover, 
+#peace-modal .button-primary:hover {
+    background: #1e40af;
+    color: #fff;
+}
+
+/* Peace Protocol Login Button - Yellow with Black Text */
+#peace-protocol-login-btn {
+    background: #fbbf24 !important; /* Yellow background */
+    color: #000 !important; /* Black text */
+    border-color: #f59e0b !important;
+    font-weight: 600;
+}
+
+#peace-protocol-login-btn:hover {
+    background: #f59e0b !important; /* Darker yellow on hover */
+    color: #000 !important; /* Keep black text on hover */
+    border-color: #d97706 !important;
+}
+
+/* Dark mode support for peace protocol login button */
+@media (prefers-color-scheme: dark) {
+    #peace-protocol-login-btn {
+        background: #fbbf24 !important; /* Keep yellow in dark mode */
+        color: #000 !important; /* Keep black text in dark mode */
+        border-color: #f59e0b !important;
+    }
+    
+    #peace-protocol-login-btn:hover {
+        background: #f59e0b !important; /* Darker yellow on hover in dark mode */
+        color: #000 !important; /* Keep black text on hover in dark mode */
+        border-color: #d97706 !important;
+    }
+}
+
+/* Success Modal */
+#peace-success-modal {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100000;
+    align-items: center;
+    justify-content: center;
+}
+
+#peace-success-modal button {
+    margin-top: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+/* Fallback for .button if theme does not style it - for success modal */
+#peace-success-modal .button {
+    display: inline-block;
+    padding: 0.5em 1.2em;
+    font-size: 1em;
+    border-radius: 4px;
+    border: none;
+    background: #f3f4f6;
+    color: #222;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+#peace-success-modal .button-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+#peace-success-modal .button:hover, 
+#peace-success-modal .button-primary:hover {
+    background: #1e40af;
+    color: #fff;
+}
+
+/* Redirect Modal */
+#peace-redirect-modal button {
+    margin-top: 1rem;
+}
+
+/* Fallback for .button if theme does not style it - for redirect modal */
+#peace-redirect-modal .button {
+    display: inline-block;
+    padding: 0.5em 1.2em;
+    font-size: 1em;
+    border-radius: 4px;
+    border: none;
+    background: #f3f4f6;
+    color: #222;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+#peace-redirect-modal .button-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+#peace-redirect-modal .button:hover, 
+#peace-redirect-modal .button-primary:hover {
+    background: #1e40af;
+    color: #fff;
+}
+
+/* Federated Modal */
+/* Fallback for .button if theme does not style it - for federated modal */
+#peace-federated-modal .button {
+    display: inline-block;
+    padding: 0.5em 1.2em;
+    font-size: 1em;
+    border-radius: 4px;
+    border: none;
+    background: #f3f4f6;
+    color: #222;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+#peace-federated-modal .button-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+#peace-federated-modal .button:hover, 
+#peace-federated-modal .button-primary:hover {
+    background: #1e40af;
+    color: #fff;
+}
+
+/* Default styling for federated modal content */
+#peace-federated-modal-content {
+    background: #fff;
+    color: #333;
+}
+
+/* Dark mode support for federated modal */
+@media (prefers-color-scheme: dark) {
+    #peace-federated-modal-content {
+        background: #222;
+        color: #eee;
+    }
+}
+
+/* Federated Modal Styles */
+#peace-federated-modal {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100000;
+    align-items: center;
+    justify-content: center;
+}
+
+#peace-federated-modal-content {
+    background: #fff;
+    max-width: 500px;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    color: #333;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#peace-federated-modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #2563eb;
+}
+
+#peace-federated-modal ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#peace-federated-modal li {
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#peace-federated-modal li:hover {
+    background-color: #f3f4f6;
+}
+
+#peace-federated-modal li.selected {
+    background-color: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+#peace-federated-modal .site-name {
+    font-weight: bold;
+    display: block;
+}
+
+#peace-federated-modal .site-url {
+    font-size: 0.875rem;
+    color: #6b7280;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+#peace-federated-modal li.selected .site-url {
+    color: #dbeafe;
+}
+
+#peace-federated-modal button {
+    margin-top: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    #peace-federated-modal-content {
+        background: #222;
+        color: #eee;
+    }
+    
+    #peace-federated-modal li {
+        border-color: #374151;
+    }
+    
+    #peace-federated-modal li:hover {
+        background-color: #374151;
+    }
+    
+    #peace-federated-modal .site-url {
+        color: #9ca3af;
+    }
+}
+
+/* Choice Modal */
+#peace-choice-modal {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100000;
+    align-items: center;
+    justify-content: center;
+}
+
+#peace-choice-modal-content {
+    background: #fff;
+    max-width: 400px;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    color: #333;
+    text-align: center;
+}
+
+#peace-choice-modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #2563eb;
+}
+
+#peace-choice-modal button {
+    margin: 0.5rem;
+    min-width: 120px;
+}
+
+/* Dark mode support for choice modal */
+@media (prefers-color-scheme: dark) {
+    #peace-choice-modal-content {
+        background: #222;
+        color: #eee;
+    }
+}
+
+/* Note counter */
+#peace-note-counter {
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-align: right;
+    margin-top: 0.25rem;
+}
+
+/* Sending as indicator */
+#peace-sending-as {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+/* Switch site link */
+#peace-switch-site-link {
+    font-size: 0.875rem;
+    color: #2563eb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#peace-switch-site-link:hover {
+    text-decoration: underline;
+}
+
+/* Modal actions container */
+.peace-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.peace-modal-actions #peace-sending-as {
+    font-size: 0.95em;
+    color: #666;
+    flex: 1 1 100%;
+    margin-bottom: 0.2em;
+    text-align: left;
+} 
