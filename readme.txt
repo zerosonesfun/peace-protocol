@@ -4,7 +4,7 @@ Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.5
+Stable tag: 1.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -208,6 +208,16 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.2.7 =
+* **Bug Fix**: Fixed REST API federated site identity issue where peace messages showed incorrect sending site
+* **REST API Enhancement**: Added missing from_site parameter to REST API calls for proper federated site attribution
+* **Cross-Site Communication**: Peace messages now correctly show the actual federated site that sent them via REST API
+
+= 1.2.6 =
+* **Bug Fix**: Fixed federated site identity issue where peace messages showed incorrect sending site
+* **Federated Authentication**: Peace messages now correctly show the actual federated site that sent them
+* **User Experience**: Improved accuracy of peace attribution when using cross-site authentication
 
 = 1.2.5 =
 * **Bug Fix**: Fixed "headers already sent" session warning that occurred when used alongside other plugins

@@ -3,7 +3,7 @@
  * Plugin Name: Peace Protocol
  * Plugin URI: https://wilcosky.com/peace-protocol
  * Description: A decentralized way for WordPress admins to share peace, respect, and follow each other with cryptographic handshakes.
- * Version: 1.2.5
+ * Version: 1.2.7
  * Requires at least: 6.0
  * Tested up to: 6.8.2
  * Requires PHP: 7.4
@@ -17,7 +17,7 @@
 
 defined('ABSPATH') || exit;
 
-define('PEACEPROTOCOL_VERSION', '1.2.5');
+define('PEACEPROTOCOL_VERSION', '1.2.7');
 define('PEACEPROTOCOL_DIR', plugin_dir_path(__FILE__));
 define('PEACEPROTOCOL_URL', plugin_dir_url(__FILE__));
 

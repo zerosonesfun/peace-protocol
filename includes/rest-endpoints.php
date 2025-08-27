@@ -47,9 +47,11 @@ function peaceprotocol_receive_peace($request) {
     $target_site = sanitize_url($request->get_param('target_site'));
     $message = sanitize_textarea_field($request->get_param('message'));
     $token = sanitize_text_field($request->get_param('token'));
+    $from_site = sanitize_url($request->get_param('from_site'));
     
     // error_log('Peace Protocol REST: Target site: ' . $target_site);
     // error_log('Peace Protocol REST: Token: ' . $token);
+    // error_log('Peace Protocol REST: From site: ' . $from_site);
     
     // Validate token
     $identity = peaceprotocol_validate_token($token);
@@ -66,15 +68,19 @@ function peaceprotocol_receive_peace($request) {
         return new WP_Error('user_banned', 'You are banned from sending peace', array('status' => 403));
     }
     
+    // Use from_site if provided, otherwise fall back to token's site_url
+    $sending_site = $from_site ?: $identity['site_url'];
+    
     // error_log('Peace Protocol REST: Identity validated: ' . print_r($identity, true));
+    // error_log('Peace Protocol REST: Using sending site: ' . $sending_site);
     
     // Save Peace Log directly (don't call send_peace_to_site which would create infinite loop)
     $log_id = wp_insert_post([
         'post_type' => 'peaceprotocol_log',
-        'post_title' => 'Peace from ' . $identity['site_url'],
+        'post_title' => 'Peace from ' . $sending_site,
         'post_content' => $message,
         'post_status' => 'publish',
-        'meta_input' => ['from_site' => $identity['site_url'], 'note' => $message]
+        'meta_input' => ['from_site' => $sending_site, 'note' => $message]
     ]);
 
     // error_log('Peace Protocol REST: Peace log created with ID: ' . $log_id);
@@ -1536,7 +1542,7 @@ add_action('rest_api_init', function () {
             }
             
             $identity = array(
-                'site_url' => get_site_url(),
+                'site_url' => $federated_site,
                 'token' => $active_token
             );
             
@@ -1647,7 +1653,7 @@ function peaceprotocol_ajax_send_peace() {
     }
     
     $identity = array(
-        'site_url' => get_site_url(),
+        'site_url' => $federated_site,
         'token' => $active_token
     );
     
@@ -2004,7 +2010,8 @@ function peaceprotocol_send_peace_to_site($target_site, $message, $identity) {
         'body' => json_encode(array(
             'target_site' => $target_site,
             'message' => $message,
-            'token' => $identity['token']
+            'token' => $identity['token'],
+            'from_site' => $identity['site_url']
         )),
         'timeout' => 2
     ));
