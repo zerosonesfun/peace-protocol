@@ -219,7 +219,7 @@ function peaceprotocol_handle_federated_auth_return($auth_code, $federated_site,
         // error_log('Peace Protocol: Creating federated user representing site: ' . $federated_site);
         
         // Set session flag to show peace modal
-        if (!session_id()) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
         $_SESSION['peace_show_modal_after_login'] = true;

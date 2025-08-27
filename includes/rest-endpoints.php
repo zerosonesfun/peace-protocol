@@ -1884,7 +1884,7 @@ function peaceprotocol_ajax_federated_login() {
             // error_log('Peace Protocol: Federated login successful for site: ' . $federated_site . ', user: ' . $user->user_login);
             
             // Set a session flag to show the peace modal
-            if (!session_id()) {
+            if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                 session_start();
             }
             $_SESSION['peace_show_modal_after_login'] = true;
@@ -2305,7 +2305,7 @@ add_action('template_redirect', function() {
                 error_log('Peace Protocol: IndieAuth user logged in successfully: ' . $user->user_login);
                 
                 // Set session data to show the peace modal
-                if (!session_id()) {
+                if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                     session_start();
                 }
                 $_SESSION['peace_show_modal_after_login'] = true;
@@ -2338,7 +2338,7 @@ add_action('template_redirect', function() {
                     // error_log('Peace Protocol: Federated login successful for site: ' . $federated_site . ', user: ' . $user->user_login);
                     
                     // Set a session flag to show the peace modal
-                    if (!session_id()) {
+                    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                         session_start();
                     }
                     $_SESSION['peace_show_modal_after_login'] = true;
@@ -2379,7 +2379,8 @@ add_action('template_redirect', function() {
 
 // Check for session flag to show peace modal after federated login
 add_action('wp_footer', function() {
-    if (!session_id()) {
+    // Check if session is already started to avoid headers already sent error
+    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
         session_start();
     }
     
@@ -3465,7 +3466,7 @@ add_action('parse_request', function($wp) {
         error_log('Peace Protocol: Generated authorization code: ' . $auth_code);
         
         // Set session data to show the peace modal after login
-        if (!session_id()) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
         $_SESSION['peace_show_modal_after_login'] = true;

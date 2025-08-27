@@ -4,11 +4,13 @@ Tags: federation, peace, decentralized, security, cryptographic
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 A secure, decentralized protocol for WordPress administrators to connect their sites and build a network of trust through cryptographic handshakes.
+
+https://www.youtube.com/watch?v=GsbEmvPEzR8
 
 == Description ==
 
@@ -88,17 +90,17 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 
 #### **Peace Protocol Authentication**
 1. **User from Site A** visits Site B and wants to comment
-2. **User clicks "Send Peace"** button on Site B
+2. **User clicks "Peace"** button on Site B
 3. **User chooses "Login with Peace Protocol"** from the choice modal
 4. **Site B redirects** to Site A for authentication
 5. **Site A validates** the user and generates an authorization code
 6. **User is redirected** back to Site B with the authorization code
 7. **Site B automatically** logs in the user as a federated user from Site A
-8. **User can comment** on Site B as "Logged in as sitea.com"
+8. **User can comment** on Site B as "siteacom"
 
 #### **IndieAuth Authentication**
 1. **User from Site A** visits Site B and wants to comment
-2. **User clicks "Send Peace"** button on Site B
+2. **User clicks "Peace"** button on Site B
 3. **User chooses "Login with IndieAuth"** from the choice modal
 4. **Site B discovers** IndieAuth endpoints on Site A
 5. **Site B redirects** to Site A's IndieAuth authorization endpoint
@@ -106,7 +108,7 @@ A secure, decentralized protocol for WordPress administrators to connect their s
 7. **User is redirected** back to Site B with the authorization code
 8. **Site B exchanges** the code for an access token using PKCE
 9. **Site B automatically** logs in the user as a federated user from Site A
-10. **User can comment** on Site B as "Logged in as sitea.com"
+10. **User can comment** on Site B as "Logged in as siteacom"
 
 ### **Security Flow**
 
@@ -206,6 +208,11 @@ The plugin includes a comprehensive user banning system. You can ban users with 
 6. **User Banning**: Ban users with reason tracking and management
 
 == Changelog ==
+
+= 1.2.5 =
+* **Bug Fix**: Fixed "headers already sent" session warning that occurred when used alongside other plugins
+* **Session Security**: Improved session handling to prevent conflicts with AJAX and early-output plugins
+* **Compatibility**: Enhanced compatibility with other WordPress plugins that output content early in page load
 
 = 1.2.2 =
 * Adjustments to prepare for .org review
